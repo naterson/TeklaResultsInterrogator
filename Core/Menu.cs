@@ -119,7 +119,7 @@ namespace TeklaResultsInterrogator.Core
 
         private void Help()
         {
-            Console.WriteLine("This is the help file:");
+            Console.WriteLine("This is the help file:");  // Update this
             Waiting = true;
         }
 

@@ -7,7 +7,7 @@ using TeklaResultsInterrogator.Core;
 
 namespace TeklaResultsInterrogator.Commands
 {
-    public class Class1 : VibrationInterrogator
+    public class Class1 : ForceInterrogator
     {
         public Class1()
         {
@@ -17,6 +17,8 @@ namespace TeklaResultsInterrogator.Commands
         public override async Task ExecuteAsync()
         {
             await InitializeAsync();
+
+            Check();
 
             return;
 

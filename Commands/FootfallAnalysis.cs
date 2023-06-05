@@ -8,7 +8,10 @@ namespace TeklaResultsInterrogator.Commands
 {
     public class FootfallAnalysis : VibrationInterrogator
     {
-        public FootfallAnalysis() { }
+        public FootfallAnalysis()
+        {
+            HasOutput = true;
+        }
 
         public override async Task ExecuteAsync()
         {
@@ -26,7 +29,7 @@ namespace TeklaResultsInterrogator.Commands
             int bufferSize = 65536;
 
             // Unpacking vibration data
-            FancyWriteLine("", "Vibration Data Summary:", "", TextColor.Title);
+            FancyWriteLine("Vibration Data Summary:", TextColor.Title);
             Console.WriteLine("Unpacking vibration data...");
             IReadOnlyList<IVibrationMode> modes = LoadingVibration.Modes;
             IReadOnlyDictionary<int, INodeVibration> nodeVibrations = LoadingVibration.NodeVibrations;
@@ -49,7 +52,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine($"Vibration data unpacked in {timeUnpack} seconds.\n");
 
             // Table 1: Modal Information
-            FancyWriteLine("", "Modal Information Table:", "", TextColor.Title);
+            FancyWriteLine("Modal Information Table:", TextColor.Title);
             Console.WriteLine("Writing modal information table...");
             double start1 = stopwatch.Elapsed.TotalSeconds;
             string file1 = SaveDirectory + @"FootfallAnalysis-ModalInformation_" + FileName + ".csv";
@@ -87,7 +90,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine($"Modal information table written in {time1} seconds.\n");
 
             // Table 2: Modal Shapes
-            FancyWriteLine("", "Modal Shape Table:", "", TextColor.Title);
+            FancyWriteLine("Modal Shape Table:", TextColor.Title);
             Console.WriteLine("Writing modal shape table...");
             double start2 = stopwatch.Elapsed.TotalSeconds;
             string file2 = SaveDirectory + @"FootfallAnalysis-ModalShapes_" + FileName + ".csv";
@@ -131,7 +134,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine($"Modal shape table completed in {time2} seconds.\n");
 
             // Table 3: Joint Coordinator
-            FancyWriteLine("", "Joint Coordinator Table:", "", TextColor.Title);
+            FancyWriteLine("Joint Coordinator Table:", TextColor.Title);
             Console.WriteLine("Writing joint coordinator table...");
             double start3 = stopwatch.Elapsed.TotalSeconds;
             string file3 = SaveDirectory + @"FootFallAnalysis-JointCoordinator_" + FileName + ".csv";

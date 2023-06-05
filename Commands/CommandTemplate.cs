@@ -10,12 +10,15 @@ namespace TeklaResultsInterrogator.Commands
 {
     public class CommandTemplate : ParentTemplate  // Should inherit a parent Interrogator class
     {
-        // Should not declare any additional public properties here
+        // Should not declare any additional properties here
 
-        // Leave class constructor parameterless and empty
-        public CommandTemplate() { }
+        // Leave class constructor parameterless
+        public CommandTemplate()
+        {
+            HasOutput = false;  // Only explicitly declare properties in constructor body
+        }
 
-        // Treat this as the parameterless constructor
+        // Main routines here to be called after initialization
         public override async Task ExecuteAsync()
         {
             // Initialize parents

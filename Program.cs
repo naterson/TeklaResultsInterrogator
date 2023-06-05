@@ -48,7 +48,7 @@ namespace TeklaResultsInterrogator
             }
             else
             {
-                command.FancyWriteLine("", $"{command.Name} failed to execute completely. Task aborted.", "", BaseInterrogator.TextColor.Error);
+                command.FancyWriteLine($"{command.Name} failed to execute completely. Task aborted.", BaseInterrogator.TextColor.Error);
                 return;
             }
             
