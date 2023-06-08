@@ -36,6 +36,7 @@ namespace TeklaResultsInterrogator.Core
             if (Application == null)
             {
                 FancyWriteLine("No running instances of TSD found!", TextColor.Error);
+                Flag = true;
                 return;
             }
 
@@ -47,6 +48,7 @@ namespace TeklaResultsInterrogator.Core
             if (Document == null)
             {
                 FancyWriteLine("No active Document found!", TextColor.Error);
+                Flag = true;
                 return;
             }
 
@@ -54,6 +56,7 @@ namespace TeklaResultsInterrogator.Core
             if (DocumentPath == null || DocumentPath == "")
             {
                 FancyWriteLine("Active Document not yet saved!", TextColor.Error);
+                Flag = true;
                 return;
             }
 
@@ -66,6 +69,7 @@ namespace TeklaResultsInterrogator.Core
             if (Model == null)
             {
                 FancyWriteLine("No Model found within Document!", TextColor.Error);
+                Flag = true;
                 return;
             }
 
@@ -115,7 +119,6 @@ namespace TeklaResultsInterrogator.Core
                     return;
                 }
             }
-            Flag = false;
             return;
         }
 

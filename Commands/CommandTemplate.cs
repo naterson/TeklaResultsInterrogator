@@ -10,7 +10,7 @@ namespace TeklaResultsInterrogator.Commands
 {
     public class CommandTemplate : ParentTemplate  // Should inherit a parent Interrogator class
     {
-        // Should not declare any additional properties here
+        // Should not declare any public properties here
 
         // Leave class constructor parameterless
         public CommandTemplate()
@@ -38,6 +38,8 @@ namespace TeklaResultsInterrogator.Commands
             // Finish up
             stopwatch.Stop();
             ExecutionTime = stopwatch.Elapsed.TotalSeconds;
+
+            Check();
 
             return;
         }

@@ -33,10 +33,10 @@ namespace TeklaResultsInterrogator
             }
             else
             {
-                Console.WriteLine("Command threw an error.");
+                Console.WriteLine("Aborted.");
                 return;
             }
-
+            command.Check();
             // If command executed successfully, wrap it up and exit
             if (!command.Flag)
             {

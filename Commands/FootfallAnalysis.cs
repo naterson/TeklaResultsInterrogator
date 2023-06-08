@@ -17,7 +17,7 @@ namespace TeklaResultsInterrogator.Commands
         {
             // Initialize parents
             await InitializeAsync();
-            
+
             // Check for null properties
             if (Flag)
             {
@@ -56,7 +56,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine("Writing modal information table...");
             double start1 = stopwatch.Elapsed.TotalSeconds;
             string file1 = SaveDirectory + @"FootfallAnalysis-ModalInformation_" + FileName + ".csv";
-            string header1 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}\n", "Mode No.", "Frequency [Hz]", "Modal Mass [k]", "Mx [%]", "My [%]", "Mz [%]", "Rx [%]", "Ry [%]", "Rz [%]");
+            string header1 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}\n", "Mode No.", "Frequency [Hz]", "Modal Mass [N]", "Mx [%]", "My [%]", "Mz [%]", "Rx [%]", "Ry [%]", "Rz [%]");
             File.WriteAllText(file1, "");
             File.AppendAllText(file1, header1);
 
@@ -67,7 +67,7 @@ namespace TeklaResultsInterrogator.Commands
                 foreach (IVibrationMode mode in modes)
                 {
                     double f = mode.Frequency;                    // Modal frequency [Hz]
-                    double m = mode.ModalMass * 0.0002248089;     // Modal mass [k];
+                    double m = mode.ModalMass;                    // Modal mass [N];
                     double mx = mode.MassParticipation.Mx * 100;  // Mass participation factor [%]
                     double my = mode.MassParticipation.My * 100;
                     double mz = mode.MassParticipation.Mz * 100;
@@ -94,7 +94,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine("Writing modal shape table...");
             double start2 = stopwatch.Elapsed.TotalSeconds;
             string file2 = SaveDirectory + @"FootfallAnalysis-ModalShapes_" + FileName + ".csv";
-            string header2 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7}\n", "Joint ID", "Mode No.", "Ux [ft]", "Uy [ft]", "Uz [ft]", "Rx [rad]", "Ry [rad]", "Rz [rad]");
+            string header2 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7}\n", "Joint ID", "Mode No.", "Ux [mm]", "Uy [mm]", "Uz [mm]", "Rx [rad]", "Ry [rad]", "Rz [rad]");
             File.WriteAllText(file2, "");
             File.WriteAllText(file2, header2);
 
@@ -111,10 +111,10 @@ namespace TeklaResultsInterrogator.Commands
                     int nodeModeId = 1;  // Manually indexing mode ID starting at 1
                     foreach (IDisplacement displacement in displacements)
                     {
-                        double ux = displacement.Mx * 0.00328084;  // Nodal displacements [ft]
-                        double uy = displacement.My * 0.00328084;
-                        double uz = displacement.Mz * 0.00328084;
-                        double rx = displacement.Rx;               // Nodal rotations [rad]
+                        double ux = displacement.Mx;  // Nodal displacements [mm]
+                        double uy = displacement.My;
+                        double uz = displacement.Mz;
+                        double rx = displacement.Rx;  // Nodal rotations [rad]
                         double ry = displacement.Ry;
                         double rz = displacement.Rz;
 
