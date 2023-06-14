@@ -42,13 +42,13 @@ namespace TeklaResultsInterrogator
             {
                 double time = Math.Round(command.InitializationTime + command.ExecutionTime, 3);
                 command.MakeHeader(true);
-                command.FancyWriteLine("Command ", command.Name, $" executed successfully in {time} seconds.\nThe application will now terminate.", BaseInterrogator.TextColor.Command);
+                BaseInterrogator.FancyWriteLine("Command ", command.Name, $" executed successfully in {time} seconds.\nThe application will now terminate.", BaseInterrogator.TextColor.Command);
                 command.MakeHeader(true);
                 return;
             }
             else
             {
-                command.FancyWriteLine($"{command.Name} failed to execute completely. Task aborted.", BaseInterrogator.TextColor.Error);
+                BaseInterrogator.FancyWriteLine($"{command.Name} failed to execute completely. Task aborted.", BaseInterrogator.TextColor.Error);
                 return;
             }
             

@@ -145,9 +145,10 @@ namespace TeklaResultsInterrogator.Core
             Title = ConsoleColor.DarkCyan,
             Path = ConsoleColor.DarkYellow,
             Error = ConsoleColor.DarkRed,
+            Warning = ConsoleColor.Yellow,
         }
 
-        public void FancyWriteLine(string beforeText, string fancyText, string afterText, TextColor fancyColor)
+        public static void FancyWriteLine(string beforeText, string fancyText, string afterText, TextColor fancyColor)
         {
             Console.ForegroundColor = (ConsoleColor)TextColor.Text;
             Console.Write(beforeText);
@@ -157,7 +158,7 @@ namespace TeklaResultsInterrogator.Core
             Console.WriteLine(afterText);
         }
 
-        public void FancyWriteLine(string text, TextColor fancyColor)
+        public static void FancyWriteLine(string text, TextColor fancyColor)
         {
             Console.ForegroundColor = (ConsoleColor)fancyColor;
             Console.WriteLine(text);

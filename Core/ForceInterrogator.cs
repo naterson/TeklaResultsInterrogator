@@ -13,11 +13,15 @@ namespace TeklaResultsInterrogator.Core
     public class ForceInterrogator : BaseInterrogator
     {
         private AnalysisType AnalysisType = AnalysisType.FirstOrderLinear;
+        protected List<MemberConstruction> RequestedMemberType = new List<MemberConstruction>();
         protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
+        protected List<ILoadcase>? AllLoadcases { get; set; }
         protected List<ILoadcase>? SolvedCases { get; set; }
+        protected List<ICombination>? AllCombinations { get; set; }
         protected List<ICombination>? SolvedCombinations { get; set; }
-
-        private MemberConstruction MemberType = MemberConstruction.Unknown;
+        protected List<IEnvelope>? AllEnvelopes { get; set; }
+        protected List<IEnvelope>? SolvedEnvelopes { get; set; }
+        protected IEnumerable<IMember>? AllMembers { get; set; }
 
         public ForceInterrogator() { }
 
@@ -75,11 +79,16 @@ namespace TeklaResultsInterrogator.Core
                 return;
             }
 
-            foreach (Guid guid in solvedLoadingGuids)
+            // Get members
+            Console.WriteLine("Searching for members...");
+            IEnumerable<IMember>? allMembers = await Model.GetMembersAsync(null);
+            if (!allMembers.Any() || allMembers == null)
             {
-                IEnumerable<IElementEndForces> endForces = await analysis3Dresults.GetEndForcesAsync(guid, LoadingResultType.Base, null);
-
+                FancyWriteLine("No members found!", TextColor.Error);
+                Flag = true;
+                return;
             }
+            AllMembers = allMembers;
 
             // Get solved loadcases
             Console.WriteLine("Searching for solved loadcases...");
@@ -90,6 +99,7 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
+            AllLoadcases = loadingCases.ToList();
             List<ILoadcase> solvedCases = loadingCases.Where(c => solvedLoadingGuids.Contains(c.Id)).ToList();
             if (!solvedCases.Any() || solvedCases == null)
             {
@@ -108,6 +118,7 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
+            AllCombinations = loadingCombinations.ToList();
             List<ICombination> solvedCombinations = loadingCombinations.Where(c => solvedLoadingGuids.Contains(c.Id)).ToList();
             if (!solvedCombinations.Any() || solvedCombinations == null)
             {
@@ -117,24 +128,22 @@ namespace TeklaResultsInterrogator.Core
             }
             SolvedCombinations = solvedCombinations;
 
-            
-
             // Get solved load envelopes
             Console.WriteLine("Searching for solved load envelopes...");
             IEnumerable<IEnvelope> loadingEnvelopes = await Model.GetEnvelopesAsync(null);
             if (!loadingEnvelopes.Any() || loadingEnvelopes == null)
             {
-                FancyWriteLine("No load envelopes found!", TextColor.Error);
-                Flag = true;
-                return;
+                FancyWriteLine("No load envelopes found!", TextColor.Warning);
+                Flag = false;  // Do not raise flag for no envelopes
             }
+            AllEnvelopes = loadingEnvelopes.ToList();
             List<IEnvelope> solvedEnvelopes = loadingEnvelopes.Where(c => solvedLoadingGuids.Contains(c.Id)).ToList();
             if (!solvedEnvelopes.Any() || solvedEnvelopes == null)
             {
-                FancyWriteLine("No solved load envelopes found!", TextColor.Error);
-                Flag = true;
-                return;
+                FancyWriteLine("No solved load envelopes found!", TextColor.Warning);
+                Flag = false;  // Do not raise flag for no solved envelopes
             }
+            SolvedEnvelopes = solvedEnvelopes;
 
             // Finish up
             stopwatch.Stop();
