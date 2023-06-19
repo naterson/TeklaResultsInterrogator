@@ -17,3 +17,5 @@ Paths: yellow
 Need some way to tell in each child class if in itialization of parent was successful (i.e., no null properties). If all properties are non-null, then the routine should continue. If any property is null, then the routine should exit with error.
 
 What to do if multiple tekla files in the same folder?
+
+hi bruno
