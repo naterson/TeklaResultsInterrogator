@@ -37,11 +37,18 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine("Unpacking loading data...");
             Console.WriteLine($"{AllLoadcases.Count} loadcases found, {SolvedCases.Count} solved.");
             Console.WriteLine($"{AllCombinations.Count} load combinations found, {SolvedCombinations.Count} solved.");
-            Console.WriteLine($"{AllEnvelopes.Count} load envelopes found, {SolvedEnvelopes.Count} solved.");
+            Console.WriteLine($"{AllEnvelopes.Count} load envelopes found, {SolvedEnvelopes.Count} solved.\n");
 
             // Unpacking member data
             FancyWriteLine("Member summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
+
+            List<IMember> steelBeams = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value)).ToList();
+
+            Console.WriteLine($"{AllMembers.Count} structural members found in model.");
+            Console.WriteLine($"{steelBeams.Count} steel beams found.");
+
+
 
 
 

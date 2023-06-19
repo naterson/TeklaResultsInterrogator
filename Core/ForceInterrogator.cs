@@ -21,7 +21,7 @@ namespace TeklaResultsInterrogator.Core
         protected List<ICombination>? SolvedCombinations { get; set; }
         protected List<IEnvelope>? AllEnvelopes { get; set; }
         protected List<IEnvelope>? SolvedEnvelopes { get; set; }
-        protected IEnumerable<IMember>? AllMembers { get; set; }
+        protected List<IMember>? AllMembers { get; set; }
 
         public ForceInterrogator() { }
 
@@ -88,7 +88,7 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
-            AllMembers = allMembers;
+            AllMembers = allMembers.ToList();
 
             // Get solved loadcases
             Console.WriteLine("Searching for solved loadcases...");
