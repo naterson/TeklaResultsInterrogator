@@ -48,7 +48,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
             Console.WriteLine($"{steelBeams.Count} steel beams found.");
 
-
+            
 
 
 

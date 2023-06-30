@@ -94,7 +94,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine("Writing modal shape table...");
             double start2 = stopwatch.Elapsed.TotalSeconds;
             string file2 = SaveDirectory + @"FootfallAnalysis-ModalShapes_" + FileName + ".csv";
-            string header2 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7}\n", "Joint ID", "Mode No.", "Ux [mm]", "Uy [mm]", "Uz [mm]", "Rx [rad]", "Ry [rad]", "Rz [rad]");
+            string header2 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7}\n", "Joint ID", "Mode No.", "Ux [m]", "Uy [m]", "Uz [m]", "Rx [rad]", "Ry [rad]", "Rz [rad]");
             File.WriteAllText(file2, "");
             File.WriteAllText(file2, header2);
 
@@ -111,7 +111,7 @@ namespace TeklaResultsInterrogator.Commands
                     int nodeModeId = 1;  // Manually indexing mode ID starting at 1
                     foreach (IDisplacement displacement in displacements)
                     {
-                        double ux = displacement.Mx;  // Nodal displacements [mm]
+                        double ux = displacement.Mx;  // Nodal displacements [m]
                         double uy = displacement.My;
                         double uz = displacement.Mz;
                         double rx = displacement.Rx;  // Nodal rotations [rad]
