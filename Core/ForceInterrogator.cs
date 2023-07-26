@@ -154,5 +154,46 @@ namespace TeklaResultsInterrogator.Core
 
             return;
         }
+
+        public List<ILoadingCase> AskLoading(List<ILoadcase> solvedCases, List<ICombination> solvedCombinations, List<IEnvelope> solvedEnvelopes)
+        {
+            Dictionary<string, List<ILoadingCase>> loadingOptions = new Dictionary<string, List<ILoadingCase>>();
+
+            if (solvedCases.Count > 0)
+            {
+                loadingOptions.Add("Loadcases", solvedCases.Cast<ILoadingCase>().ToList());
+            }
+            if (solvedCombinations.Count > 0)
+            {
+                loadingOptions.Add("Combinations", solvedCombinations.Cast<ILoadingCase>().ToList());
+            }
+            if (solvedEnvelopes.Count > 0)
+            {
+                loadingOptions.Add("Envelopes", solvedEnvelopes.Cast<ILoadingCase>().ToList());
+            }
+
+            List<ILoadingCase>? loadingCases = null;
+
+            FancyWriteLine("Available loading conditions:", TextColor.Text);
+            foreach (string condition in loadingOptions.Keys)
+            {
+                FancyWriteLine($"  {condition}", TextColor.Command);
+            }
+
+            do
+            {
+                string? readIn = AskUser("Choose an available loading condition:");
+                if (readIn != null && loadingOptions.Keys.Contains(readIn))
+                {
+                    loadingCases = loadingOptions[readIn];
+                }
+                else
+                {
+                    FancyWriteLine("Loading Condition ", $"{readIn}", " not found.", TextColor.Command);
+                }
+            } while (loadingCases == null);
+
+            return loadingCases;
+        }
     }
 }

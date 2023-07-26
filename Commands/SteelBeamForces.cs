@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TeklaResultsInterrogator.Core;
+using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Structure;
 
 namespace TeklaResultsInterrogator.Commands
@@ -39,6 +40,8 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine($"{AllCombinations.Count} load combinations found, {SolvedCombinations.Count} solved.");
             Console.WriteLine($"{AllEnvelopes.Count} load envelopes found, {SolvedEnvelopes.Count} solved.\n");
 
+            List<ILoadingCase> loadingCases = AskLoading(SolvedCases, SolvedCombinations, SolvedEnvelopes);
+
             // Unpacking member data
             FancyWriteLine("Member summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
@@ -48,7 +51,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
             Console.WriteLine($"{steelBeams.Count} steel beams found.");
 
-            
+
 
 
 
