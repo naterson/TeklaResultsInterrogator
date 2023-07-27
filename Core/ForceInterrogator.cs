@@ -12,7 +12,7 @@ namespace TeklaResultsInterrogator.Core
 {
     public class ForceInterrogator : BaseInterrogator
     {
-        private AnalysisType AnalysisType = AnalysisType.FirstOrderLinear;
+        protected AnalysisType AnalysisType = AnalysisType.FirstOrderLinear;
         protected List<MemberConstruction> RequestedMemberType = new List<MemberConstruction>();
         protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
         protected List<ILoadcase>? AllLoadcases { get; set; }
@@ -182,7 +182,7 @@ namespace TeklaResultsInterrogator.Core
 
             do
             {
-                string? readIn = AskUser("Choose an available loading condition:");
+                string? readIn = AskUser("Choose an available loading condition: ");
                 if (readIn != null && loadingOptions.Keys.Contains(readIn))
                 {
                     loadingCases = loadingOptions[readIn];
@@ -194,6 +194,53 @@ namespace TeklaResultsInterrogator.Core
             } while (loadingCases == null);
 
             return loadingCases;
+        }
+
+        public int AskPoints(int maxPoints)
+        {
+            FancyWriteLine("Select the number of points along beam span at which forces and displacements will be calculated.", TextColor.Text);
+            FancyWriteLine("Enter ", "1", " to return maxima only.", TextColor.Command);
+            FancyWriteLine("Enter ", "2", $" or greater (max. {maxPoints}) to subdivide spans.", TextColor.Command);
+            FancyWriteLine("Enter ", "0", " to ignore force and displacement data.", TextColor.Command);
+
+            int numPoints = -1;
+
+            do
+            {
+                string? readIn = AskUser($"Enter an integer between 0 and {maxPoints}: ");
+                if (int.TryParse(readIn, out _))
+                {
+                    numPoints = int.Parse(readIn);
+                }
+                if (numPoints < 0 | numPoints > maxPoints)
+                {
+                    FancyWriteLine("Illegal input: ", $"{readIn}", "", TextColor.Command);
+                }
+            } while (numPoints < 0 | numPoints > maxPoints);
+
+            return numPoints;
+        }
+
+        public bool AskReduced()
+        {
+            bool? reduced = null;
+            do
+            {
+                string? readIn = AskUser("Enter Y to query reduced forces, or N to query nonreduced forces: ");
+                if (readIn == "Y")
+                {
+                    reduced = true;
+                }
+                else if (readIn == "N")
+                {
+                    reduced = false;
+                }
+                else
+                {
+                    FancyWriteLine("Input ", $"{readIn}", " not recodnized.", TextColor.Command);
+                }
+            } while (reduced == null);
+            return (bool)reduced;
         }
     }
 }

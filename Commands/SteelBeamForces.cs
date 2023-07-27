@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using TeklaResultsInterrogator.Core;
 using TSD.API.Remoting.Loading;
+using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
 
 namespace TeklaResultsInterrogator.Commands
@@ -42,6 +45,8 @@ namespace TeklaResultsInterrogator.Commands
 
             List<ILoadingCase> loadingCases = AskLoading(SolvedCases, SolvedCombinations, SolvedEnvelopes);
 
+            bool reduced = AskReduced();
+
             // Unpacking member data
             FancyWriteLine("Member summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
@@ -49,8 +54,34 @@ namespace TeklaResultsInterrogator.Commands
             List<IMember> steelBeams = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value)).ToList();
 
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
-            Console.WriteLine($"{steelBeams.Count} steel beams found.");
+            Console.WriteLine($"{steelBeams.Count} steel beams found.\n");
 
+
+
+            #region span length test
+
+            FancyWriteLine("Testing member force spans", TextColor.Title);
+            int subdivisions = AskPoints(20);
+            FancyWriteLine($"Asked for {subdivisions} points.", TextColor.Warning);
+
+            foreach (IMember member in steelBeams)
+            {
+                string name = member.Name;
+                IEnumerable<IMemberSpan> spans = await member.GetSpanAsync();
+
+                foreach (IMemberSpan span in spans)
+                {
+                    foreach (ILoadingCase loadingCase in loadingCases)
+                    {
+                        SpanResults spanResults = new SpanResults(span, subdivisions, loadingCase, reduced, AnalysisType, member);
+                        MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
+                        Console.WriteLine($"Maximum Bending Moment is {maxSpanInfo.MomentMajor.Value} at {maxSpanInfo.MomentMajor.Position}");
+                    }
+                }
+
+            }
+
+            #endregion
 
 
 

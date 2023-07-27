@@ -167,7 +167,7 @@ namespace TeklaResultsInterrogator.Core
 
         public string? AskUser(string prompt)
         {
-            FancyWriteLine(prompt, TextColor.Text);
+            Console.Write(prompt);
             Console.ForegroundColor = (ConsoleColor)TextColor.Command;
             string? readIn = Console.ReadLine();
             Console.ForegroundColor = (ConsoleColor)TextColor.Text;
