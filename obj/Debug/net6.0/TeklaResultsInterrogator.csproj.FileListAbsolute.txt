@@ -25,3 +25,4 @@ C:\Users\nnickerson\github\TeklaResultsInterrogator\obj\Debug\net6.0\refint\Tekl
 C:\Users\nnickerson\github\TeklaResultsInterrogator\obj\Debug\net6.0\TeklaResultsInterrogator.pdb
 C:\Users\nnickerson\github\TeklaResultsInterrogator\obj\Debug\net6.0\TeklaResultsInterrogator.genruntimeconfig.cache
 C:\Users\nnickerson\github\TeklaResultsInterrogator\obj\Debug\net6.0\ref\TeklaResultsInterrogator.dll
+C:\Users\nnickerson\github\TeklaResultsInterrogator\bin\Debug\net6.0\MathNet.Numerics.dll

@@ -67,7 +67,7 @@ namespace TeklaResultsInterrogator.Core
         private List<MenuOption> GetMenuOptions()
         {
             // Query \Commands directory to get filenames; create MenuOptions from all filenames
-            string commandPath = @"..\..\..\Commands";
+            string commandPath = @"..\..\..\Commands";  // TODO: use namespace class names, not folder filenames
             string[] fileNames = Directory.GetFiles(commandPath);
             List<MenuOption> options = new List<MenuOption>();
             foreach (string fileName in fileNames)

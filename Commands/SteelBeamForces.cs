@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -61,7 +62,7 @@ namespace TeklaResultsInterrogator.Commands
             #region span length test
 
             FancyWriteLine("Testing member force spans", TextColor.Title);
-            int subdivisions = AskPoints(20);
+            int subdivisions = AskPoints(20);  // Setting maximum number of stations to 20
             FancyWriteLine($"Asked for {subdivisions} points.", TextColor.Warning);
 
             foreach (IMember member in steelBeams)
@@ -71,11 +72,27 @@ namespace TeklaResultsInterrogator.Commands
 
                 foreach (IMemberSpan span in spans)
                 {
+                    string spanName = span.Name;
+                    int spanIdx = span.Index;
+                    double length = span.Length.Value;
+
                     foreach (ILoadingCase loadingCase in loadingCases)
                     {
+                        string loadName = loadingCase.Name;
                         SpanResults spanResults = new SpanResults(span, subdivisions, loadingCase, reduced, AnalysisType, member);
-                        MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
-                        Console.WriteLine($"Maximum Bending Moment is {maxSpanInfo.MomentMajor.Value} at {maxSpanInfo.MomentMajor.Position}");
+                        if (subdivisions >= 1)
+                        {
+                            // Getting maximum internal forces and displacements and locations
+                            MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
+                        }
+                        if (subdivisions >= 2)
+                        {
+                            // Getting internal forces and displacements at each station
+                            List<PointSpanInfo> pointSpanInfo = await spanResults.GetStations();
+
+                        }
+                        
+
                     }
                 }
 
