@@ -99,8 +99,8 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
-            AllLoadcases = loadingCases.ToList();
-            List<ILoadcase> solvedCases = loadingCases.Where(c => solvedLoadingGuids.Contains(c.Id)).ToList();
+            AllLoadcases = loadingCases.Where(lc => lc.Name != "0 ").ToList();  // Eliminating "0" slab unit load and roof unit load loadcases
+            List<ILoadcase> solvedCases = AllLoadcases.Where(c => solvedLoadingGuids.Contains(c.Id)).ToList();
             if (!solvedCases.Any() || solvedCases == null)
             {
                 FancyWriteLine("No solved loadcases found!", TextColor.Error);
@@ -237,7 +237,7 @@ namespace TeklaResultsInterrogator.Core
                 }
                 else
                 {
-                    FancyWriteLine("Input ", $"{readIn}", " not recodnized.", TextColor.Command);
+                    FancyWriteLine("Input ", $"{readIn}", " not recognized.", TextColor.Command);
                 }
             } while (reduced == null);
             return (bool)reduced;
