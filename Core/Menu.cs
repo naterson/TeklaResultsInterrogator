@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -66,15 +67,12 @@ namespace TeklaResultsInterrogator.Core
 
         private List<MenuOption> GetMenuOptions()
         {
-            // Query \Commands directory to get filenames; create MenuOptions from all filenames
-            string commandPath = @"..\..\..\Commands";  // TODO: use namespace class names, not folder filenames
-            string[] fileNames = Directory.GetFiles(commandPath);
             List<MenuOption> options = new List<MenuOption>();
-            foreach (string fileName in fileNames)
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            List<Type> types = assembly.GetTypes().Where(t => t.Namespace == "TeklaResultsInterrogator.Commands" && t.IsNested == false).ToList();
+            foreach (Type type in types)
             {
-                int idxS = fileName.LastIndexOf('\\') + 1;
-                int idxF = fileName.LastIndexOf('.');
-                string commandName = fileName.Substring(idxS, idxF - idxS);
+                string commandName = type.Name;
                 options.Add(new MenuOption(commandName, () => InvokeCommand(commandName)));
             }
             return options;
