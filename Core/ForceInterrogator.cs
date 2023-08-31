@@ -6,6 +6,7 @@ using TSD.API.Remoting.Document;
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
+using TSD.API.Remoting.Common;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
 
 namespace TeklaResultsInterrogator.Core
@@ -137,7 +138,15 @@ namespace TeklaResultsInterrogator.Core
                 Flag = false;  // Do not raise flag for no envelopes
             }
             AllEnvelopes = loadingEnvelopes.ToList();
-            List<IEnvelope> solvedEnvelopes = loadingEnvelopes.Where(c => solvedLoadingGuids.Contains(c.Id)).ToList();
+            List<IEnvelope> solvedEnvelopes = new List<IEnvelope>();
+            foreach (IEnvelope envelope in AllEnvelopes)
+            {
+                List<TSD.API.Remoting.Common.Properties.IReadOnlyProperty<Guid>> combinationIds = envelope.CombinationIds.ToList();
+                if (combinationIds.All(id => solvedLoadingGuids.Contains(id.Value)))
+                {
+                    solvedEnvelopes.Add(envelope);
+                }
+            }
             if (!solvedEnvelopes.Any() || solvedEnvelopes == null)
             {
                 FancyWriteLine("No solved load envelopes found!", TextColor.Warning);

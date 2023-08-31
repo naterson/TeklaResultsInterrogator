@@ -17,6 +17,8 @@ using System.Data.Common;
 
 using TeklaResultsInterrogator.Core;
 using TeklaResultsInterrogator.Commands;
+using System.Reflection;
+using System.Diagnostics;
 
 namespace TeklaResultsInterrogator
 {
@@ -34,6 +36,7 @@ namespace TeklaResultsInterrogator
             else
             {
                 Console.WriteLine("Aborted.");
+                HaltExit(true);
                 return;
             }
             command.Check();
@@ -44,14 +47,26 @@ namespace TeklaResultsInterrogator
                 command.MakeHeader(true);
                 BaseInterrogator.FancyWriteLine("Command ", command.Name, $" executed successfully in {time} seconds.\nThe application will now terminate.", BaseInterrogator.TextColor.Command);
                 command.MakeHeader(true);
+                HaltExit(true);
                 return;
             }
             else
             {
                 BaseInterrogator.FancyWriteLine($"{command.Name} failed to execute completely. Task aborted.", BaseInterrogator.TextColor.Error);
+                HaltExit(false);
                 return;
             }
             
+        }
+        private static void HaltExit(bool success)
+        {
+            string name = Process.GetCurrentProcess().ProcessName;
+            string path = Environment.ProcessPath;
+            int process = Process.GetCurrentProcess().Id;
+            string status = (success == true) ? "successfully" : "unsuccessfully";
+            Console.WriteLine($"\n{name} at {path} (process {process}) executed {status}.");
+            Console.WriteLine("The application will now terminate.\nPress any key to close this window . . .");
+            Console.ReadKey(true);
         }
     }
 }
