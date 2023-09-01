@@ -94,45 +94,37 @@ namespace TeklaResultsInterrogator.Core
             // Get solved loadcases
             Console.WriteLine("Searching for solved loadcases...");
             IEnumerable<ILoadcase> loadingCases = await Model.GetLoadcasesAsync(null);
-            if (!loadingCases.Any() || loadingCases == null)
+            if (!loadingCases.Any())
             {
-                FancyWriteLine("No loadcases found!", TextColor.Error);
-                Flag = true;
-                return;
+                FancyWriteLine("No loadcases found!", TextColor.Warning);
             }
             AllLoadcases = loadingCases.Where(lc => lc.Name != "0 ").ToList();  // Eliminating "0" slab unit load and roof unit load loadcases
             List<ILoadcase> solvedCases = AllLoadcases.Where(c => solvedLoadingGuids.Contains(c.Id)).ToList();
-            if (!solvedCases.Any() || solvedCases == null)
+            if (!solvedCases.Any())
             {
-                FancyWriteLine("No solved loadcases found!", TextColor.Error);
-                Flag = true;
-                return;
+                FancyWriteLine("No solved loadcases found!", TextColor.Warning);
             }
             SolvedCases = solvedCases;
 
             // Get solved load combos
             Console.WriteLine("Searching for solved load combinations...");
             IEnumerable<ICombination> loadingCombinations = await Model.GetCombinationsAsync(null);
-            if (!loadingCombinations.Any() || loadingCombinations == null)
+            if (!loadingCombinations.Any())
             {
-                FancyWriteLine("No load combinations found!", TextColor.Error);
-                Flag = true;
-                return;
+                FancyWriteLine("No load combinations found!", TextColor.Warning);
             }
             AllCombinations = loadingCombinations.ToList();
             List<ICombination> solvedCombinations = loadingCombinations.Where(c => solvedLoadingGuids.Contains(c.Id)).ToList();
-            if (!solvedCombinations.Any() || solvedCombinations == null)
+            if (!solvedCombinations.Any())
             {
-                FancyWriteLine("No solved load combinations found!", TextColor.Error);
-                Flag = true;
-                return;
+                FancyWriteLine("No solved load combinations found!", TextColor.Warning);
             }
             SolvedCombinations = solvedCombinations;
 
             // Get solved load envelopes
             Console.WriteLine("Searching for solved load envelopes...");
             IEnumerable<IEnvelope> loadingEnvelopes = await Model.GetEnvelopesAsync(null);
-            if (!loadingEnvelopes.Any() || loadingEnvelopes == null)
+            if (!loadingEnvelopes.Any())
             {
                 FancyWriteLine("No load envelopes found!", TextColor.Warning);
                 Flag = false;  // Do not raise flag for no envelopes
@@ -147,12 +139,25 @@ namespace TeklaResultsInterrogator.Core
                     solvedEnvelopes.Add(envelope);
                 }
             }
-            if (!solvedEnvelopes.Any() || solvedEnvelopes == null)
+            if (!solvedEnvelopes.Any())
             {
                 FancyWriteLine("No solved load envelopes found!", TextColor.Warning);
-                Flag = false;  // Do not raise flag for no solved envelopes
             }
             SolvedEnvelopes = solvedEnvelopes;
+
+            // Check to make sure there are solved load cases
+            if (AllLoadcases.Count + AllCombinations.Count + AllEnvelopes.Count == 0)
+            {
+                FancyWriteLine("No loading found!", TextColor.Error);
+                Flag = true;
+                return;
+            }
+            if (SolvedCases.Count + SolvedCombinations.Count + SolvedEnvelopes.Count == 0)
+            {
+                FancyWriteLine("No solved loading found!", TextColor.Error);
+                Flag = true;
+                return;
+            }
 
             // Finish up
             stopwatch.Stop();

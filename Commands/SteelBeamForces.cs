@@ -36,7 +36,7 @@ namespace TeklaResultsInterrogator.Commands
 
             // Data setup and diagnostics initialization
             Stopwatch stopwatch = Stopwatch.StartNew();
-            int bufferSize = 65536;
+            int bufferSize = 65536*2;
 
             // Unpacking loading data
             FancyWriteLine("Loading Summary:", TextColor.Title);
@@ -84,47 +84,47 @@ namespace TeklaResultsInterrogator.Commands
 
             // Getting internal forces and writing table
             FancyWriteLine("\nWriting internal forces table...", TextColor.Title);
-            foreach (IMember member in steelBeams)
+            using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
             {
-                string name = member.Name;
-                Guid id = member.Id;
-                IEnumerable<IMemberSpan> spans = await member.GetSpanAsync();
-
-                int constructionPointIndex = member.MemberNodes.Value.First().Value.ConstructionPointIndex.Value;
-                IEnumerable<IConstructionPoint> constructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { constructionPointIndex });
-                int planeId = constructionPoints.First().PlaneInfo.Value.Index;
-                IEnumerable<IHorizontalConstructionPlane> level = await Model.GetLevelsAsync(new List<int>() { planeId });
-                string levelName = level.First().Name;
-
-
-                foreach (IMemberSpan span in spans)
+                foreach (IMember member in steelBeams)
                 {
-                    string spanName = span.Name;
-                    int spanIdx = span.Index;
-                    double length = span.Length.Value;
-                    double lengthFt = length * 0.00328084; // Converting from [mm] to [ft]
-                    double rot = span.RotationAngle.Value * 57.2958; // Converting from [rad] to [deg]
-                    IMemberSection section = (IMemberSection)span.ElementSection.Value;
-                    string sectionName = section.PhysicalSection.Value.LongName;
-                    string materialGrade = span.Material.Value.Name;
+                    string name = member.Name;
+                    Guid id = member.Id;
+                    IEnumerable<IMemberSpan> spans = await member.GetSpanAsync();
 
-                    int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
-                    string startNodeFixity = span.StartReleases.Value.DegreeOfFreedom.Value.ToString();
-                    if (span.StartReleases.Value.Cantilever.Value == true)
-                    {
-                        startNodeFixity += " (Cantilever end)";
-                    }
-                    startNodeFixity = startNodeFixity.Replace(',', '|');
-                    int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
-                    string endNodeFixity = span.EndReleases.Value.DegreeOfFreedom.Value.ToString();
-                    if (span.EndReleases.Value.Cantilever.Value == true)
-                    {
-                        endNodeFixity += " (Cantilever end)";
-                    }
-                    endNodeFixity = endNodeFixity.Replace(',', '|');
+                    int constructionPointIndex = member.MemberNodes.Value.First().Value.ConstructionPointIndex.Value;
+                    IEnumerable<IConstructionPoint> constructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { constructionPointIndex });
+                    int planeId = constructionPoints.First().PlaneInfo.Value.Index;
+                    IEnumerable<IHorizontalConstructionPlane> level = await Model.GetLevelsAsync(new List<int>() { planeId });
+                    string levelName = level.First().Name;
 
-                    using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
+
+                    foreach (IMemberSpan span in spans)
                     {
+                        string spanName = span.Name;
+                        int spanIdx = span.Index;
+                        double length = span.Length.Value;
+                        double lengthFt = length * 0.00328084; // Converting from [mm] to [ft]
+                        double rot = span.RotationAngle.Value * 57.2958; // Converting from [rad] to [deg]
+                        IMemberSection section = (IMemberSection)span.ElementSection.Value;
+                        string sectionName = section.PhysicalSection.Value.LongName;
+                        string materialGrade = span.Material.Value.Name;
+
+                        int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
+                        string startNodeFixity = span.StartReleases.Value.DegreeOfFreedom.Value.ToString();
+                        if (span.StartReleases.Value.Cantilever.Value == true)
+                        {
+                            startNodeFixity += " (Cantilever end)";
+                        }
+                        startNodeFixity = startNodeFixity.Replace(',', '|');
+                        int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
+                        string endNodeFixity = span.EndReleases.Value.DegreeOfFreedom.Value.ToString();
+                        if (span.EndReleases.Value.Cantilever.Value == true)
+                        {
+                            endNodeFixity += " (Cantilever end)";
+                        }
+                        endNodeFixity = endNodeFixity.Replace(',', '|');
+
                         string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}",
                             id, name, levelName, sectionName, materialGrade, spanName,
                             startNodeIdx, startNodeFixity, endNodeIdx, endNodeFixity, lengthFt, rot);
@@ -171,7 +171,7 @@ namespace TeklaResultsInterrogator.Commands
                                     }
                                 }
                             }
-                        } 
+                        }
                     }
                 }
             }
