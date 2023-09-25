@@ -73,18 +73,18 @@ namespace TeklaResultsInterrogator.Commands
                 timberColumnLifts.Add(lifts);
             }
             double endStack = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
-            Console.WriteLine($"Column stacks organized in {endStack - startStack} seconds.\n");
+            Console.WriteLine($"Column stacks organized in {Math.Round(endStack - startStack, 3)} seconds.\n");
 
-            foreach (ColumnLifts lift in timberColumnLifts)
-            {
-                Console.WriteLine($"{lift.ParentMember.Name}: {lift.ParentMember.SpanCount.Value} spans, {lift.Lifts.Count} lifts.");
-                foreach (NamedList<IMemberSpan> liftList in lift.Lifts)
-                {
-                    List<string> spanIdxs = liftList.Values.Select(s => s.Index.ToString()).ToList();
-                    Console.WriteLine($"  Lift {liftList.Name}: spans {String.Join(", ", spanIdxs)}");
-                }
-
-            }
+            // Debug readout:
+            //foreach (ColumnLifts lift in timberColumnLifts)
+            //{
+            //    Console.WriteLine($"{lift.ParentMember.Name}: {lift.ParentMember.SpanCount.Value} spans, {lift.Lifts.Count} lifts.");
+            //    foreach (NamedList<IMemberSpan> liftList in lift.Lifts)
+            //    {
+            //        List<string> spanIdxs = liftList.Values.Select(s => s.Index.ToString()).ToList();
+            //        Console.WriteLine($"  Lift {liftList.Name}: spans {String.Join(", ", spanIdxs)}");
+            //    }
+            //}
 
 
             // Set up file
@@ -104,85 +104,95 @@ namespace TeklaResultsInterrogator.Commands
             FancyWriteLine("\nWriting internal forces table...", TextColor.Title);
             using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
             {
-                foreach (IMember member in timberColumns)
+                foreach (ColumnLifts columnLifts in timberColumnLifts)
                 {
-                    string name = member.Name;
+                    IMember member = columnLifts.ParentMember;
+                    List<NamedList<IMemberSpan>> lifts = columnLifts.Lifts;
+                    string memberName = member.Name;
                     Guid id = member.Id;
-                    IEnumerable<IMemberSpan> spans = await member.GetSpanAsync();
-                    Console.WriteLine($"\nColumn {name}:");
 
-                    int constructionPointIndex = member.MemberNodes.Value.First().Value.ConstructionPointIndex.Value;
-                    IEnumerable<IConstructionPoint> constructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { constructionPointIndex });
-                    int planeId = constructionPoints.First().PlaneInfo.Value.Index;
-                    IEnumerable<IHorizontalConstructionPlane> level = await Model.GetLevelsAsync(new List<int>() { planeId });
-                    string levelName;
-                    if (level.Any())
+                    foreach (NamedList<IMemberSpan> lift in lifts)
                     {
-                        levelName = level.First().Name;
-                    }
-                    else
-                    {
-                        levelName = "Not Associated";
-                    }
+                        int startNodeIdx = lift.Values.First().StartMemberNode.ConstructionPointIndex.Value;
+                        IEnumerable<IConstructionPoint> startConstructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { startNodeIdx });
+                        IEnumerable<int> startPlaneIds = startConstructionPoints.Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane).Select(p => p.PlaneInfo.Value.Index);
+                        IHorizontalConstructionPlane? startLevel = (await Model.GetLevelsAsync(startPlaneIds)).FirstOrDefault();
+                        string startLevelName;
+                        if (startLevel != null)
+                        {
+                            startLevelName = startLevel.Name;
+                        }
+                        else
+                        {
+                            startLevelName = "Not Associated";
+                        }
 
-                    foreach (IMemberSpan span in spans)
-                    {
-                        string spanName = span.Name;
-                        int spanIdx = span.Index;
-                        double length = span.Length.Value;
-                        double lengthFt = length * 0.00328084; // Converting from [mm] to [ft]
-                        double rot = Math.Round(span.RotationAngle.Value * 57.2958, 3); // Converting from [rad] to [deg]
-                        IMemberSection generalSection = (IMemberSection)span.ElementSection.Value;
-                        ITimberBeamSection section = (ITimberBeamSection)generalSection.PhysicalSection.Value;
+                        int endNodeIdx = lift.Values.Last().EndMemberNode.ConstructionPointIndex.Value;
+                        IEnumerable<IConstructionPoint> endConstructionPoints = await Model.GetConstructionPointsAsync(new List<int> { endNodeIdx });
+                        IEnumerable<int> endPlaneIds = endConstructionPoints.Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane).Select(p => p.PlaneInfo.Value.Index);
+                        IHorizontalConstructionPlane? endLevel = (await Model.GetLevelsAsync(endPlaneIds)).FirstOrDefault();
+                        string endLevelName;
+                        if (endLevel != null)
+                        {
+                            endLevelName = endLevel.Name;
+                        }
+                        else
+                        {
+                            endLevelName = "Not Associated";
+                        }
+
+                        string liftName = memberName + $"-{lift.Name}";
+                        string includedSpans = $"({lift.Values.Count}): " + String.Join("; ", lift.Values.Select(s => s.Name));
+                        double length = lift.Values.Select(l => l.Length.Value).Sum() * 0.00328084; // Converting from [mm] to [ft]
+                        List<IMemberSection> generalSections = lift.Values.Select(v => (IMemberSection)v.ElementSection.Value).ToList();
+                        generalSections = generalSections.OrderBy(v => v.CrossSectionalArea.Value).ToList();
+                        ITimberBeamSection section = (ITimberBeamSection)generalSections.First().PhysicalSection.Value;
                         string sectionName = section.LongName;
                         double breadth = Math.Round(section.Breadth * 0.0393701, 4);  // Converting from [mm] to [in]
                         double depth = Math.Round(section.Depth * 0.0393701, 4);  // Converting from [mm] to [in]
 
-                        int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
-                        string startNodeFixity = span.StartReleases.Value.DegreeOfFreedom.Value.ToString();
-                        if (span.StartReleases.Value.Cantilever.Value == true)
+                        string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}",
+                            id, memberName, liftName, includedSpans, startLevelName, endLevelName,
+                            Math.Round(breadth, 3), Math.Round(depth, 3), Math.Round(length, 3));
+
+                        foreach (ILoadingCase loadingCase in loadingCases)
                         {
-                            startNodeFixity += " (Cantilever end)";
+                            string loadName = loadingCase.Name.Replace(',', '`');
+
+                            foreach (IMemberSpan span in lift.Values)
+                            {
+                                SpanResults spanResults = new SpanResults(span, 1, loadingCase, reduced, AnalysisType, member);
+                                MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
+                                Console.WriteLine($"{memberName}, {liftName}, {loadName}, {span.Name}");
+
+                                // envelope values here
+                            }
+
+                            // or here
+
+                            // write line to file here
                         }
-                        startNodeFixity = startNodeFixity.Replace(',', '|');
-                        int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
-                        string endNodeFixity = span.EndReleases.Value.DegreeOfFreedom.Value.ToString();
-                        if (span.EndReleases.Value.Cantilever.Value == true)
-                        {
-                            endNodeFixity += " (Cantilever end)";
-                        }
-                        endNodeFixity = endNodeFixity.Replace(',', '|');
-
-                        Console.WriteLine($"  Span {spanIdx}:");
-                        Console.WriteLine($"    Start: {startNodeFixity}");
-                        Console.WriteLine($"    End:   {endNodeFixity}");
-
-                        string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}",
-                            id, name, levelName, sectionName, breadth, depth, spanName,
-                            startNodeIdx, startNodeFixity, endNodeIdx, endNodeFixity, lengthFt, rot);
-
-                        //foreach (ILoadingCase loadingCase in loadingCases)
-                        //{
-                        //    string loadName = loadingCase.Name.Replace(',', '`');
-                        //    SpanResults spanResults = new SpanResults(span, 1, loadingCase, reduced, AnalysisType, member);
-
-                        //    // Getting maximum internal forces and displacements and locations
-                        //    MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
-                        //    string maxLine = spanLineOnly + "," + String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}",
-                        //        loadName,
-                        //        maxSpanInfo.ShearMajor.Value,
-                        //        maxSpanInfo.ShearMinor.Value,
-                        //        maxSpanInfo.MomentMajor.Value,
-                        //        maxSpanInfo.MomentMinor.Value,
-                        //        maxSpanInfo.AxialForce.Value,
-                        //        maxSpanInfo.Torsion.Value,
-                        //        maxSpanInfo.DeflectionMajor.Value,
-                        //        maxSpanInfo.DeflectionMinor.Value);
-                        //    sw1.WriteLine(maxLine);
-                        //}
                     }
                 }
+                Console.WriteLine("done");
+
+                
             }
+
+            // Output diagnostics to console
+            FancyWriteLine("Saved to: ", file1, "", TextColor.Path);
+            double size1 = Math.Round((double)new FileInfo(file1).Length / 1024, 2);
+            Console.WriteLine($"File size: {size1} KB");
+            double time1 = Math.Round(stopwatch.Elapsed.TotalSeconds - start1, 3);
+            Console.WriteLine($"Steel Beam table written in {time1} seconds.\n");
+
+            // Finish up
+            stopwatch.Stop();
+            ExecutionTime = stopwatch.Elapsed.TotalSeconds;
+
+            Check();
+
+            return;
         }
     }
 }

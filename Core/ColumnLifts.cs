@@ -35,7 +35,7 @@ namespace TeklaResultsInterrogator.Core
                 
                 if (!thisBotFixed || !previousSpanTopFixed)
                 {
-                    string liftName = $"L{Lifts.Count}";
+                    string liftName = $"L{Lifts.Count + 1}";
                     NamedList<IMemberSpan> lift = new NamedList<IMemberSpan>(liftName);
                     lift.Add(span);
                     Lifts.Add(lift);
@@ -79,12 +79,12 @@ namespace TeklaResultsInterrogator.Core
 
             return isFixed;
         }
+    }
 
-        private enum StackEnd
-        {
-            Bottom,
-            Top,
-        }
+    public enum StackEnd
+    {
+        Bottom,
+        Top,
     }
 
     public class NamedList<T>
