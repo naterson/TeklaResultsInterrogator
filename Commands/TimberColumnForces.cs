@@ -65,17 +65,31 @@ namespace TeklaResultsInterrogator.Commands
             // Organizing column stacks into lists of lifts
             double startStack = timeUnpack;
             FancyWriteLine("Organizing Column Stacks...", TextColor.Title);
-            //List<List<List<IMemberSpan>>> timberColumnsByLift = new List<List<List<IMemberSpan>>>();
-            //foreach (IMember column in timberColumns)
-            //{
-            //    List<Im>
-            //}
+            List<ColumnLifts> timberColumnLifts = new List<ColumnLifts>();
+            foreach (IMember column in timberColumns)
+            {
+                ColumnLifts lifts = new ColumnLifts(column);
+                await lifts.OrganizeByFixity();
+                timberColumnLifts.Add(lifts);
+            }
+            double endStack = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
+            Console.WriteLine($"Column stacks organized in {endStack - startStack} seconds.\n");
 
+            foreach (ColumnLifts lift in timberColumnLifts)
+            {
+                Console.WriteLine($"{lift.ParentMember.Name}: {lift.ParentMember.SpanCount.Value} spans, {lift.Lifts.Count} lifts.");
+                foreach (NamedList<IMemberSpan> liftList in lift.Lifts)
+                {
+                    List<string> spanIdxs = liftList.Values.Select(s => s.Index.ToString()).ToList();
+                    Console.WriteLine($"  Lift {liftList.Name}: spans {String.Join(", ", spanIdxs)}");
+                }
+
+            }
 
 
             // Set up file
             // TODO
-            double start1 = timeUnpack;
+            double start1 = endStack;
             string file1 = SaveDirectory + @"TimberColumnForces_" + FileName + ".csv";
             string header1 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},{21}\n",
                 "Tekla GUID", "Member Name", "Level", "Section", "Breadth [in]", "Depth [in]", "Span Name",

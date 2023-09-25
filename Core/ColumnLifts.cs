@@ -21,12 +21,6 @@ namespace TeklaResultsInterrogator.Core
         {
             ParentMember = parentMember;
             Lifts = new List<NamedList<IMemberSpan>>();
-
-            // Get all spans of member
-            // iterate through each span
-            // look at fixity of span
-            // bottom of span or top of previous span is pinned, add to new lift
-            //
         }
 
         public async Task OrganizeByFixity()
@@ -41,26 +35,27 @@ namespace TeklaResultsInterrogator.Core
                 
                 if (!thisBotFixed || !previousSpanTopFixed)
                 {
-                    // if bottom of this span is NOT fixed, OR if top of previous span is NOT fixed, add this span to start of new lift and name the lift list
+                    string liftName = $"L{Lifts.Count}";
+                    NamedList<IMemberSpan> lift = new NamedList<IMemberSpan>(liftName);
+                    lift.Add(span);
+                    Lifts.Add(lift);
                 }
                 else
                 {
-                    // else add this span to end of previous lift
+                    Lifts.Last().Add(span);
                 }
 
                 previousSpanTopFixed = thisTopFixed;
             }
 
-            // sort each stack in each lift by stack index
-            // sort each lift in list by index of first stack in lift
-
-
+            return;
         }
 
         private bool CheckFixity(IMemberSpan span, StackEnd end)
         {
             bool isFixed = false;
             ISpanReleases? releases = null;
+
             switch (end)
             {
                 case StackEnd.Bottom:
