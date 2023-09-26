@@ -59,6 +59,8 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
             Console.WriteLine($"{timberColumns.Count} timber columns found.");
 
+            List<IHorizontalConstructionPlane> levels = (await Model.GetLevelsAsync()).ToList();
+
             double timeUnpack = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
             Console.WriteLine($"Loading and member data unpacked in {timeUnpack} seconds.\n");
 
@@ -75,33 +77,20 @@ namespace TeklaResultsInterrogator.Commands
             double endStack = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
             Console.WriteLine($"Column stacks organized in {Math.Round(endStack - startStack, 3)} seconds.\n");
 
-            // Debug readout:
-            //foreach (ColumnLifts lift in timberColumnLifts)
-            //{
-            //    Console.WriteLine($"{lift.ParentMember.Name}: {lift.ParentMember.SpanCount.Value} spans, {lift.Lifts.Count} lifts.");
-            //    foreach (NamedList<IMemberSpan> liftList in lift.Lifts)
-            //    {
-            //        List<string> spanIdxs = liftList.Values.Select(s => s.Index.ToString()).ToList();
-            //        Console.WriteLine($"  Lift {liftList.Name}: spans {String.Join(", ", spanIdxs)}");
-            //    }
-            //}
-
-
             // Set up file
-            // TODO
             double start1 = endStack;
             string file1 = SaveDirectory + @"TimberColumnForces_" + FileName + ".csv";
-            string header1 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},{21}\n",
-                "Tekla GUID", "Member Name", "Level", "Section", "Breadth [in]", "Depth [in]", "Span Name",
-                "Start Node", "Start Node Fixity", "End Node", "End Node Fixity",
-                "Span Length [ft]", "Span Rotation [deg]", "Loading Name",
-                "Shear Major [k]", "Shear Minor [k]", "Moment Major [k-ft]", "Moment Minor [k-ft]",
-                "Axial Force [k]", "Torsion [k-ft]", "Deflection Major [in]", "Deflection Minor [in]");
+            string header1 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16}\n",
+                "Tekla GUID", "Member Name", "Lift Name", "Included Spans", "Start Level", "End Level",
+                "Section", "Breadth [in]", "Depth [in]", "Length [ft]", "Loading Name",
+                "Shear Major [k]", "Shear Minor [k]",
+                "Moment Major [k-ft]", "Moment Minor [k-ft]",
+                "Axial Force [k]", "Torsion [k-ft]");
             File.WriteAllText(file1, "");
             File.AppendAllText(file1, header1);
 
             // Getting internal forces and writing table
-            FancyWriteLine("\nWriting internal forces table...", TextColor.Title);
+            FancyWriteLine("Writing internal forces table...", TextColor.Title);
             using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
             {
                 foreach (ColumnLifts columnLifts in timberColumnLifts)
@@ -116,29 +105,33 @@ namespace TeklaResultsInterrogator.Commands
                         int startNodeIdx = lift.Values.First().StartMemberNode.ConstructionPointIndex.Value;
                         IEnumerable<IConstructionPoint> startConstructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { startNodeIdx });
                         IEnumerable<int> startPlaneIds = startConstructionPoints.Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane).Select(p => p.PlaneInfo.Value.Index);
-                        IHorizontalConstructionPlane? startLevel = (await Model.GetLevelsAsync(startPlaneIds)).FirstOrDefault();
                         string startLevelName;
-                        if (startLevel != null)
+                        if (startPlaneIds.Any())
                         {
+                            IHorizontalConstructionPlane startLevel = (await Model.GetLevelsAsync(startPlaneIds)).First();
                             startLevelName = startLevel.Name;
                         }
                         else
                         {
-                            startLevelName = "Not Associated";
+                            double zStart = startConstructionPoints.First().Coordinates.Value.Z;
+                            IHorizontalConstructionPlane closestLevel = levels.OrderBy(l => Math.Abs(zStart - l.Level.Value)).First();
+                            startLevelName = $"~{closestLevel.Name}";
                         }
 
                         int endNodeIdx = lift.Values.Last().EndMemberNode.ConstructionPointIndex.Value;
                         IEnumerable<IConstructionPoint> endConstructionPoints = await Model.GetConstructionPointsAsync(new List<int> { endNodeIdx });
                         IEnumerable<int> endPlaneIds = endConstructionPoints.Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane).Select(p => p.PlaneInfo.Value.Index);
-                        IHorizontalConstructionPlane? endLevel = (await Model.GetLevelsAsync(endPlaneIds)).FirstOrDefault();
                         string endLevelName;
-                        if (endLevel != null)
+                        if (endPlaneIds.Any())
                         {
+                            IHorizontalConstructionPlane endLevel = (await Model.GetLevelsAsync(endPlaneIds)).First();
                             endLevelName = endLevel.Name;
                         }
                         else
                         {
-                            endLevelName = "Not Associated";
+                            double zEnd = endConstructionPoints.First().Coordinates.Value.Z;
+                            IHorizontalConstructionPlane closestLevel = levels.OrderBy(l => Math.Abs(zEnd - l.Level.Value)).First();
+                            endLevelName = $"~ {closestLevel.Name}";
                         }
 
                         string liftName = memberName + $"-{lift.Name}";
@@ -151,32 +144,34 @@ namespace TeklaResultsInterrogator.Commands
                         double breadth = Math.Round(section.Breadth * 0.0393701, 4);  // Converting from [mm] to [in]
                         double depth = Math.Round(section.Depth * 0.0393701, 4);  // Converting from [mm] to [in]
 
-                        string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}",
-                            id, memberName, liftName, includedSpans, startLevelName, endLevelName,
+                        string liftLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}",
+                            id, memberName, liftName, includedSpans, startLevelName, endLevelName, sectionName,
                             Math.Round(breadth, 3), Math.Round(depth, 3), Math.Round(length, 3));
 
                         foreach (ILoadingCase loadingCase in loadingCases)
                         {
                             string loadName = loadingCase.Name.Replace(',', '`');
+                            MaxSpanInfo maxLiftInfo = new MaxSpanInfo();
 
                             foreach (IMemberSpan span in lift.Values)
                             {
                                 SpanResults spanResults = new SpanResults(span, 1, loadingCase, reduced, AnalysisType, member);
                                 MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
-                                Console.WriteLine($"{memberName}, {liftName}, {loadName}, {span.Name}");
-
-                                // envelope values here
+                                maxLiftInfo.EnvelopeAndUpdate(maxSpanInfo);
                             }
 
-                            // or here
-
-                            // write line to file here
+                            string maxLine = liftLineOnly + "," + String.Format("{0},{1},{2},{3},{4},{5},{6}",
+                                loadName,
+                                maxLiftInfo.ShearMajor.Value,
+                                maxLiftInfo.ShearMinor.Value,
+                                maxLiftInfo.MomentMajor.Value,
+                                maxLiftInfo.MomentMinor.Value,
+                                maxLiftInfo.AxialForce.Value,
+                                maxLiftInfo.Torsion.Value);
+                            sw1.WriteLine(maxLine);
                         }
                     }
                 }
-                Console.WriteLine("done");
-
-                
             }
 
             // Output diagnostics to console

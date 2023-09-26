@@ -222,6 +222,34 @@ namespace TeklaResultsInterrogator.Core
             DisplacementMajor = displacementMajor;
             DisplacementMinor = displacementMinor;
         }
+
+        public MaxSpanInfo()
+        {
+            ShearMajor = new MaxSpanInfoData();
+            ShearMinor = new MaxSpanInfoData();
+            MomentMajor = new MaxSpanInfoData();
+            MomentMinor = new MaxSpanInfoData();
+            AxialForce = new MaxSpanInfoData();
+            Torsion = new MaxSpanInfoData();
+            DeflectionMajor = new MaxSpanInfoData();
+            DeflectionMinor = new MaxSpanInfoData();
+            DisplacementMajor = new MaxSpanInfoData();
+            DisplacementMinor = new MaxSpanInfoData();
+        }
+
+        public void EnvelopeAndUpdate(MaxSpanInfo other)
+        {
+            ShearMajor.CompareAndUpdate(other.ShearMajor);
+            ShearMinor.CompareAndUpdate(other.ShearMinor);
+            MomentMajor.CompareAndUpdate(other.MomentMajor);
+            MomentMinor.CompareAndUpdate(other.MomentMinor);
+            AxialForce.CompareAndUpdate(other.AxialForce);
+            Torsion.CompareAndUpdate(other.Torsion);
+            DeflectionMajor.CompareAndUpdate(other.DeflectionMajor);
+            DeflectionMinor.CompareAndUpdate(other.DeflectionMinor);
+            DisplacementMajor.CompareAndUpdate(other.DisplacementMajor);
+            DisplacementMinor.CompareAndUpdate(other.DisplacementMinor);
+        }
     }
 
     public class MaxSpanInfoData
@@ -248,6 +276,41 @@ namespace TeklaResultsInterrogator.Core
             {
                 Value = maxValue;
                 Position = maxPosition;
+            }
+        }
+
+        public MaxSpanInfoData()
+        {
+            Position = 0;
+            Value = 0;
+            MaxPosition = 0;
+            MaxValue = 0;
+            MinPosition = 0;
+            MinValue = 0;
+        }
+
+        public void CompareAndUpdate(MaxSpanInfoData other)
+        {
+            // TODO: if enveloping multiple spans (such as a multi-stack column lift) the position will need to be offset
+            if (other.MaxValue > MaxValue)
+            {
+                MaxValue = other.MaxValue;
+                MaxPosition = other.MaxPosition;
+            }
+            if (other.MinValue < MinValue)
+            {
+                MinValue = other.MinValue;
+                MinPosition = other.MinPosition;
+            }
+            if (Math.Abs(MinValue) > Math.Abs(MaxValue))
+            {
+                Value = MinValue;
+                Position = MinPosition;
+            }
+            else
+            {
+                Value = MaxValue;
+                Position = MaxPosition;
             }
         }
     }
