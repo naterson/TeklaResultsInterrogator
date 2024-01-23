@@ -151,8 +151,7 @@ namespace TeklaResultsInterrogator.Commands
                                     // Getting maximum internal forces and displacements and locations
                                     MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
                                     string maxLine = spanLineOnly + "," + String.Format("{0},{1},{2}",
-                                        loadName, "MAXIMA",
-                                        maxSpanInfo.AxialForce.Value);
+                                        loadName, maxSpanInfo.AxialForce.Value);
                                     sw1.WriteLine(maxLine);
                                 }
                                 
