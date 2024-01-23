@@ -214,7 +214,10 @@ namespace TeklaResultsInterrogator.Core
         {
             FancyWriteLine("Select the number of points along beam span at which forces and displacements will be calculated.", TextColor.Text);
             FancyWriteLine("Enter ", "1", " to return maxima only.", TextColor.Command);
-            FancyWriteLine("Enter ", "2", $" or greater (max. {maxPoints}) to subdivide spans.", TextColor.Command);
+            if (maxPoints >= 2) 
+            {
+                FancyWriteLine("Enter ", "2", $" or greater (max. {maxPoints}) to subdivide spans.", TextColor.Command);
+            }
             FancyWriteLine("Enter ", "0", " to ignore force and displacement data.", TextColor.Command);
 
             int numPoints = -1;

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj": {}
+    "C:\\Users\\ejacobsen\\source\\repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj": {}
   },
   "projects": {
-    "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj": {
+    "C:\\Users\\ejacobsen\\source\\repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj",
+        "projectUniqueName": "C:\\Users\\ejacobsen\\source\\repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj",
         "projectName": "TeklaResultsInterrogator",
-        "projectPath": "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj",
+        "projectPath": "C:\\Users\\ejacobsen\\source\\repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj",
         "packagesPath": "C:\\Users\\ejacobsen\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\obj\\",
+        "outputPath": "C:\\Users\\ejacobsen\\source\\repos\\TeklaResultsInterrogator\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\ejacobsen\\AppData\\Roaming\\NuGet\\NuGet.Config",
