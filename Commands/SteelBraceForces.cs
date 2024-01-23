@@ -15,9 +15,9 @@ using TSD.API.Remoting.Sections;
 
 namespace TeklaResultsInterrogator.Commands
 {
-    public class SteelBeamForces : ForceInterrogator
+    public class SteelBraceForces : ForceInterrogator
     {
-        public SteelBeamForces()
+        public SteelBraceForces()
         {
             HasOutput = true;
             RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.SteelBrace};
@@ -47,9 +47,8 @@ namespace TeklaResultsInterrogator.Commands
 
             stopwatch.Stop();
             List<ILoadingCase> loadingCases = AskLoading(SolvedCases, SolvedCombinations, SolvedEnvelopes);
-            bool reduced = AskReduced();
+            bool reduced = false; // Braces do not have live load reductions so this is automatically set to false
             stopwatch.Start();
-
             // Unpacking member data
             FancyWriteLine("\nMember summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
@@ -153,7 +152,7 @@ namespace TeklaResultsInterrogator.Commands
                                     MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
                                     string maxLine = spanLineOnly + "," + String.Format("{0},{1},{2}",
                                         loadName, "MAXIMA",
-                                        maxSpanInfo.AxialForce.Value,
+                                        maxSpanInfo.AxialForce.Value);
                                     sw1.WriteLine(maxLine);
                                 }
                                 
@@ -168,7 +167,7 @@ namespace TeklaResultsInterrogator.Commands
             double size1 = Math.Round((double)new FileInfo(file1).Length / 1024, 2);
             Console.WriteLine($"File size: {size1} KB");
             double time1 = Math.Round(stopwatch.Elapsed.TotalSeconds - start1, 3);
-            Console.WriteLine($"Steel Beam table written in {time1} seconds.\n");
+            Console.WriteLine($"Steel Brace table written in {time1} seconds.\n");
 
             // Finish up
             stopwatch.Stop();
