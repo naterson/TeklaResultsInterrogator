@@ -1,24 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\nnickerson\\github\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj": {}
+    "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj": {}
   },
   "projects": {
-    "C:\\Users\\nnickerson\\github\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj": {
+    "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\nnickerson\\github\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj",
+        "projectUniqueName": "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj",
         "projectName": "TeklaResultsInterrogator",
-        "projectPath": "C:\\Users\\nnickerson\\github\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj",
-        "packagesPath": "C:\\Users\\nnickerson\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\nnickerson\\github\\TeklaResultsInterrogator\\obj\\",
+        "projectPath": "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\TeklaResultsInterrogator.csproj",
+        "packagesPath": "C:\\Users\\ejacobsen\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ejacobsen\\Source\\Repos\\TeklaResultsInterrogator\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\nnickerson\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\ejacobsen\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -64,12 +60,30 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[6.0.16, 6.0.16]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "version": "[6.0.16, 6.0.16]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[6.0.16, 6.0.16]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[6.0.16, 6.0.16]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.200\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.203\\RuntimeIdentifierGraph.json"
         }
       }
     }
