@@ -12,16 +12,43 @@ using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Sections;
+using TSD.API.Remoting.Common;
 
 namespace TeklaResultsInterrogator.Commands
 {
-    public class SteelBraceForces : ForceInterrogator
+    public class SteelBraceForces : ForceInterrogator // Inherits from force interrogator
     {
-        public SteelBraceForces()
+
+        public SteelBraceForces() // Class constructor for the SteelBraceForces Class
         {
             HasOutput = true;
-            RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.SteelBrace};
+            AnalysisType = AnalysisType.SecondOrderLinear;
+            RequestedMemberType = new List<MemberConstruction>() {MemberConstruction.SteelBrace};
+            GravityOnlyState = false;
+            AutoDesignState = true;
         }
+
+
+
+        public override async Task DataSetup() 
+        {
+
+            // Data setup and diagnostics initialization
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            int bufferSize = 65536 * 2;
+
+            // Unpacking loading data
+            FancyWriteLine("Loading Summary:", TextColor.Title);
+            Console.WriteLine("Unpacking loading data...");
+            Console.WriteLine($"{AllLoadcases.Count} loadcases found, {SolvedCases.Count} solved.");
+            Console.WriteLine($"{AllCombinations.Count} load combinations found, {SolvedCombinations.Count} solved.");
+            Console.WriteLine($"{AllEnvelopes.Count} load envelopes found, {SolvedEnvelopes.Count} solved.\n");
+
+            stopwatch.Stop();
+
+        }
+
+
 
         public override async Task ExecuteAsync()
         {
@@ -34,18 +61,8 @@ namespace TeklaResultsInterrogator.Commands
                 return;
             }
 
-            // Data setup and diagnostics initialization
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            int bufferSize = 65536*2;
+            await DataSetup();
 
-            // Unpacking loading data
-            FancyWriteLine("Loading Summary:", TextColor.Title);
-            Console.WriteLine("Unpacking loading data...");
-            Console.WriteLine($"{AllLoadcases.Count} loadcases found, {SolvedCases.Count} solved.");
-            Console.WriteLine($"{AllCombinations.Count} load combinations found, {SolvedCombinations.Count} solved.");
-            Console.WriteLine($"{AllEnvelopes.Count} load envelopes found, {SolvedEnvelopes.Count} solved.\n");
-
-            stopwatch.Stop();
             List<ILoadingCase> loadingCases = AskLoading(SolvedCases, SolvedCombinations, SolvedEnvelopes);
             bool reduced = false; // Braces do not have live load reductions so this is automatically set to false
             stopwatch.Start();
@@ -53,7 +70,7 @@ namespace TeklaResultsInterrogator.Commands
             FancyWriteLine("\nMember summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
 
-            List<IMember> steelBraces = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value)).ToList();
+            List<IMember> steelBraces = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value) & (c.Data.Value.AutoDesign.Value == AutoDesignState) & (c.Data.Value.GravityOnly.Value == GravityOnlyState)).ToList();
 
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
             Console.WriteLine($"{steelBraces.Count} steel braces found.");
@@ -79,6 +96,7 @@ namespace TeklaResultsInterrogator.Commands
             File.AppendAllText(file1, header1);
 
             // Getting internal forces and writing table
+
             FancyWriteLine("\nWriting internal forces table...", TextColor.Title);
             using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
             {
@@ -116,19 +134,7 @@ namespace TeklaResultsInterrogator.Commands
                         string materialGrade = span.Material.Value.Name;
 
                         int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
-                        //string startNodeFixity = span.StartReleases.Value.DegreeOfFreedom.Value.ToString();
-                        //if (span.StartReleases.Value.Cantilever.Value == true)
-                        //{
-                        //    startNodeFixity += " (Cantilever end)";
-                        //}
-                        //startNodeFixity = startNodeFixity.Replace(',', '|');
                         int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
-                        //string endNodeFixity = span.EndReleases.Value.DegreeOfFreedom.Value.ToString();
-                        //if (span.EndReleases.Value.Cantilever.Value == true)
-                        //{
-                        //    endNodeFixity += " (Cantilever end)";
-                        //}
-                        //endNodeFixity = endNodeFixity.Replace(',', '|');
 
                         string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}",
                             id, name, levelName, sectionName, materialGrade,

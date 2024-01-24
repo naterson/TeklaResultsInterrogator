@@ -13,8 +13,15 @@ namespace TeklaResultsInterrogator.Core
 {
     public class ForceInterrogator : BaseInterrogator
     {
+        
+        
         protected AnalysisType AnalysisType = AnalysisType.FirstOrderLinear;
+
         protected List<MemberConstruction> RequestedMemberType = new List<MemberConstruction>();
+        
+        protected bool GravityOnlyState { get; set; }
+        protected bool AutoDesignState { get; set; }
+       
         protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
         protected List<ILoadcase>? AllLoadcases { get; set; }
         protected List<ILoadcase>? SolvedCases { get; set; }
@@ -47,6 +54,9 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
+
+            FancyWriteLine($"{AnalysisType} solver model found.", TextColor.Text);
+
             TSD.API.Remoting.Solver.IModel? solverModel = solverModels.FirstOrDefault();
             if (solverModel == null)
             {
@@ -203,7 +213,7 @@ namespace TeklaResultsInterrogator.Core
                 }
                 else
                 {
-                    FancyWriteLine("Loading Condition ", $"{readIn}", " not found.", TextColor.Command);
+                    FancyWriteLine("Loading Condition", $"{readIn}", " not found.", TextColor.Command);
                 }
             } while (loadingCases == null);
 
