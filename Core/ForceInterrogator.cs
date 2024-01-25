@@ -14,13 +14,12 @@ namespace TeklaResultsInterrogator.Core
     public class ForceInterrogator : BaseInterrogator
     {
         
-        
         protected AnalysisType AnalysisType = AnalysisType.FirstOrderLinear;
 
         protected List<MemberConstruction> RequestedMemberType = new List<MemberConstruction>();
         
-        protected bool GravityOnlyState { get; set; }
-        protected bool AutoDesignState { get; set; }
+        //protected bool? GravityOnlyState { get; set; }
+        //protected bool? AutoDesignState { get; set; }
        
         protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
         protected List<ILoadcase>? AllLoadcases { get; set; }
@@ -220,54 +219,54 @@ namespace TeklaResultsInterrogator.Core
             return loadingCases;
         }
 
-        public bool AskGravityOnly()
+        public bool? AskGravityOnly()
         {
             bool? GravityOnly = null;
    
-                string? readIn = AskUser("Enter Y to query gravity only members, or N to query lateral members, hit enter to get All");
+                string? readIn = AskUser("Enter Y to query Gravity Only members, or N to query Lateral members, hit Enter to get All");
                 if (readIn == "Y")
                 {
-                    GravityOnly = true;
+                GravityOnly = true;
                 }
                 else if (readIn == "N")
                 {
-                    GravityOnly = false;
+                GravityOnly = false;
                 }
                 else if (readIn == "")
                 {
-                    GravityOnly = null;
+                GravityOnly = null;
                 }
                 else
                 {
                     FancyWriteLine("Input ", $"{readIn}", " not recognized. All members will be returned", TextColor.Command);
                 }
          
-            return (bool)GravityOnly;
+            return (bool?)GravityOnly;
         }
 
-        public bool AskAutoDesign()
+        public bool? AskAutoDesign()
         {
-            bool? AskAutoDesign = null;
+            bool? AutoDesign = null;
 
-            string? readIn = AskUser("Enter Y to query gravity only members, or N to query lateral members, hit enter to get All");
+            string? readIn = AskUser("Enter Y to query Autodesign members only, or N to query Non-Autodesign members, hit Enter to get All");
             if (readIn == "Y")
             {
-                AskAutoDesign = true;
+                AutoDesign = true;
             }
             else if (readIn == "N")
             {
-                AskAutoDesign = false;
+                AutoDesign = false;
             }
             else if (readIn == "")
             {
-                AskAutoDesign = null;
+                AutoDesign = null;
             }
             else
             {
                 FancyWriteLine("Input ", $"{readIn}", " not recognized. All members will be returned", TextColor.Command);
             }
 
-            return (bool)AskAutoDesign;
+            return (bool?)AutoDesign;
         }
 
 

@@ -16,15 +16,14 @@ using TSD.API.Remoting.Common;
 
 namespace TeklaResultsInterrogator.Commands
 {
-    public class SteelBraceForces : ForceInterrogator // Inherits from force interrogator
+    public class SteelBraceForces : ForceInterrogator
     {
 
-        public SteelBraceForces() // Class constructor for the SteelBraceForces Class
+        public SteelBraceForces() 
         {
             HasOutput = true;
-            AnalysisType = AnalysisType.SecondOrderLinear;
+            AnalysisType = AnalysisType.FirstOrderLinear;
             RequestedMemberType = new List<MemberConstruction>() {MemberConstruction.SteelBrace};
-
         }
 
         public override async Task ExecuteAsync()
@@ -57,10 +56,27 @@ namespace TeklaResultsInterrogator.Commands
             FancyWriteLine("\nMember summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
 
-            GravityOnlyState = AskGravityOnly();
-            AutoDesignState = AskGravityOnly();
+            bool? GravityOnlyState = AskGravityOnly();
+            bool? AutoDesignState = AskAutoDesign();
 
-            List<IMember> steelBraces = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value) & (c.Data.Value.AutoDesign.Value == AutoDesignState) & (c.Data.Value.GravityOnly.Value == GravityOnlyState)).ToList();
+            List<IMember> steelBraces = null;
+
+            if (GravityOnlyState == null & AutoDesignState == null)
+            {
+               steelBraces = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value)).ToList();
+            }
+            else if (AutoDesignState == null)
+            {
+                steelBraces = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value) & c.Data.Value.GravityOnly.Value == GravityOnlyState).ToList();
+            }
+            else if (GravityOnlyState == null)
+            {
+                steelBraces = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value) & c.Data.Value.AutoDesign.Value == AutoDesignState).ToList();
+            }
+            else
+            {
+                steelBraces = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value) & c.Data.Value.AutoDesign.Value == AutoDesignState & c.Data.Value.GravityOnly.Value == GravityOnlyState).ToList();
+            };
 
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
             Console.WriteLine($"{steelBraces.Count} steel braces found.");
