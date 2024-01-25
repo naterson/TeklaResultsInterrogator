@@ -22,7 +22,7 @@ namespace TeklaResultsInterrogator.Commands
         public SteelBraceForces() 
         {
             HasOutput = true;
-            AnalysisType = AnalysisType.FirstOrderLinear;
+            AnalysisType = AnalysisType.SecondOrderLinear;
             RequestedMemberType = new List<MemberConstruction>() {MemberConstruction.SteelBrace};
         }
 
@@ -140,6 +140,7 @@ namespace TeklaResultsInterrogator.Commands
                         string materialGrade = span.Material.Value.Name;
 
                         int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
+                        
                         int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
 
                         string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}",

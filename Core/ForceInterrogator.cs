@@ -8,6 +8,7 @@ using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Common;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
+using Google.Protobuf.WellKnownTypes;
 
 namespace TeklaResultsInterrogator.Core
 {
@@ -213,8 +214,8 @@ namespace TeklaResultsInterrogator.Core
                         FancyWriteLine(load.Name, TextColor.Text);
                     }
                     readIn = AskUser("Input a number or hit Enter to get all: ");
-                    if (readIn != null) {
-                        loadingCases = loadingCases.Where(load => load.Index.Equals(Convert.ToInt32(readIn))).ToList();
+                    if (readIn != null && readIn!="") {
+                        loadingCases = loadingCases.Where(load => load.ReferenceIndex.Equals(Convert.ToInt32(readIn))).ToList(); // This is a bad way of doing this because I am not checking if the integer is valid, but it let's not let perfect be the enemy of the good!
                     }
                 }
                 else
