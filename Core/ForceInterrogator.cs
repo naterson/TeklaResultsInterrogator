@@ -17,9 +17,6 @@ namespace TeklaResultsInterrogator.Core
         protected AnalysisType AnalysisType = AnalysisType.FirstOrderLinear;
 
         protected List<MemberConstruction> RequestedMemberType = new List<MemberConstruction>();
-        
-        //protected bool? GravityOnlyState { get; set; }
-        //protected bool? AutoDesignState { get; set; }
        
         protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
         protected List<ILoadcase>? AllLoadcases { get; set; }
@@ -207,8 +204,18 @@ namespace TeklaResultsInterrogator.Core
             {
                 string? readIn = AskUser("Choose an available loading condition: ");
                 if (readIn != null && loadingOptions.Keys.Contains(readIn))
-                {
+                {   
+                    
                     loadingCases = loadingOptions[readIn];
+                    FancyWriteLine("Available loading:", TextColor.Text);
+                    foreach (var load in loadingCases)
+                    {
+                        FancyWriteLine(load.Name, TextColor.Text);
+                    }
+                    readIn = AskUser("Input a number or hit Enter to get all: ");
+                    if (readIn != null) {
+                        loadingCases = loadingCases.Where(load => load.Index.Equals(Convert.ToInt32(readIn))).ToList();
+                    }
                 }
                 else
                 {
@@ -224,23 +231,27 @@ namespace TeklaResultsInterrogator.Core
             bool? GravityOnly = null;
    
                 string? readIn = AskUser("Enter Y to query Gravity Only members, or N to query Lateral members, hit Enter to get All");
+            do
+            {
                 if (readIn == "Y")
                 {
-                GravityOnly = true;
+                    GravityOnly = true;
                 }
                 else if (readIn == "N")
                 {
-                GravityOnly = false;
+                    GravityOnly = false;
                 }
                 else if (readIn == "")
                 {
-                GravityOnly = null;
+                    return null;
                 }
                 else
                 {
                     FancyWriteLine("Input ", $"{readIn}", " not recognized. All members will be returned", TextColor.Command);
                 }
-         
+
+            } while (GravityOnly == null);
+            
             return (bool?)GravityOnly;
         }
 

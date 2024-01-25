@@ -98,7 +98,7 @@ namespace TeklaResultsInterrogator.Commands
                 "Tekla GUID", "Member Name", "Level", "Shape", "Material", 
                 "Start Node", "End Node","Span Length [ft]", "Span Rotation [deg]","Loading Name", 
                 "Axial Force [k]");
-            File.WriteAllText(file1, "");
+            File.WriteAllText(file1, ""); // Bug will throw an exception if the user has the excel file open ekj
             File.AppendAllText(file1, header1);
 
             // Getting internal forces and writing table

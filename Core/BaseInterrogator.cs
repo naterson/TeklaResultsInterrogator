@@ -173,5 +173,14 @@ namespace TeklaResultsInterrogator.Core
             Console.ForegroundColor = (ConsoleColor)TextColor.Text;
             return readIn;
         }
+
+        //public int? AskUserInt(string prompt)
+        //{
+        //    Console.Write(prompt);
+        //    Console.ForegroundColor = (ConsoleColor)TextColor.Command;
+        //    int? readInInt = Console.Read();
+        //    Console.ForegroundColor = (ConsoleColor)TextColor.Text;
+        //    return readInInt;
+        //}
     }
 }
