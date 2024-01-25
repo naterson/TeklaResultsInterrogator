@@ -24,31 +24,8 @@ namespace TeklaResultsInterrogator.Commands
             HasOutput = true;
             AnalysisType = AnalysisType.SecondOrderLinear;
             RequestedMemberType = new List<MemberConstruction>() {MemberConstruction.SteelBrace};
-            GravityOnlyState = false;
-            AutoDesignState = true;
-        }
-
-
-
-        public override async Task DataSetup() 
-        {
-
-            // Data setup and diagnostics initialization
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            int bufferSize = 65536 * 2;
-
-            // Unpacking loading data
-            FancyWriteLine("Loading Summary:", TextColor.Title);
-            Console.WriteLine("Unpacking loading data...");
-            Console.WriteLine($"{AllLoadcases.Count} loadcases found, {SolvedCases.Count} solved.");
-            Console.WriteLine($"{AllCombinations.Count} load combinations found, {SolvedCombinations.Count} solved.");
-            Console.WriteLine($"{AllEnvelopes.Count} load envelopes found, {SolvedEnvelopes.Count} solved.\n");
-
-            stopwatch.Stop();
 
         }
-
-
 
         public override async Task ExecuteAsync()
         {
@@ -61,14 +38,27 @@ namespace TeklaResultsInterrogator.Commands
                 return;
             }
 
-            await DataSetup();
+            // Data setup and diagnostics initialization
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            int bufferSize = 65536*2;
 
+            // Unpacking loading data
+            FancyWriteLine("Loading Summary:", TextColor.Title);
+            Console.WriteLine("Unpacking loading data...");
+            Console.WriteLine($"{AllLoadcases.Count} loadcases found, {SolvedCases.Count} solved.");
+            Console.WriteLine($"{AllCombinations.Count} load combinations found, {SolvedCombinations.Count} solved.");
+            Console.WriteLine($"{AllEnvelopes.Count} load envelopes found, {SolvedEnvelopes.Count} solved.\n");
+
+            stopwatch.Stop();
             List<ILoadingCase> loadingCases = AskLoading(SolvedCases, SolvedCombinations, SolvedEnvelopes);
             bool reduced = false; // Braces do not have live load reductions so this is automatically set to false
             stopwatch.Start();
             // Unpacking member data
             FancyWriteLine("\nMember summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
+
+            GravityOnlyState = AskGravityOnly();
+            AutoDesignState = AskGravityOnly();
 
             List<IMember> steelBraces = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value) & (c.Data.Value.AutoDesign.Value == AutoDesignState) & (c.Data.Value.GravityOnly.Value == GravityOnlyState)).ToList();
 

@@ -220,6 +220,57 @@ namespace TeklaResultsInterrogator.Core
             return loadingCases;
         }
 
+        public bool AskGravityOnly()
+        {
+            bool? GravityOnly = null;
+   
+                string? readIn = AskUser("Enter Y to query gravity only members, or N to query lateral members, hit enter to get All");
+                if (readIn == "Y")
+                {
+                    GravityOnly = true;
+                }
+                else if (readIn == "N")
+                {
+                    GravityOnly = false;
+                }
+                else if (readIn == "")
+                {
+                    GravityOnly = null;
+                }
+                else
+                {
+                    FancyWriteLine("Input ", $"{readIn}", " not recognized. All members will be returned", TextColor.Command);
+                }
+         
+            return (bool)GravityOnly;
+        }
+
+        public bool AskAutoDesign()
+        {
+            bool? AskAutoDesign = null;
+
+            string? readIn = AskUser("Enter Y to query gravity only members, or N to query lateral members, hit enter to get All");
+            if (readIn == "Y")
+            {
+                AskAutoDesign = true;
+            }
+            else if (readIn == "N")
+            {
+                AskAutoDesign = false;
+            }
+            else if (readIn == "")
+            {
+                AskAutoDesign = null;
+            }
+            else
+            {
+                FancyWriteLine("Input ", $"{readIn}", " not recognized. All members will be returned", TextColor.Command);
+            }
+
+            return (bool)AskAutoDesign;
+        }
+
+
         public int AskPoints(int maxPoints)
         {
             FancyWriteLine("Select the number of points along beam span at which forces and displacements will be calculated.", TextColor.Text);
