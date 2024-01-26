@@ -23,9 +23,9 @@ namespace TeklaResultsInterrogator.Core
             Lifts = new List<NamedList<IMemberSpan>>();
         }
 
-        public async Task OrganizeByFixity()
+        public void OrganizeByFixity()
         {
-            IEnumerable<IMemberSpan> spans = await ParentMember.GetSpanAsync();
+            IEnumerable<IMemberSpan> spans = ParentMember.GetSpanAsync().Result;
             spans = spans.OrderBy(s => s.Index);
             bool previousSpanTopFixed = false;
             foreach (var span in spans)

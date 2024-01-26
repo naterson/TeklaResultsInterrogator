@@ -19,10 +19,10 @@ namespace TeklaResultsInterrogator.Core
 
         public VibrationInterrogator() { }
 
-        public override async Task InitializeAsync()
+        public override void Initialize()
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            await InitializeBaseAsync();
+            InitializeBase();
 
             // Get Vibration SolverModel
             Console.WriteLine("Searching for vibration solver model...");
@@ -32,7 +32,7 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
-            IEnumerable<TSD.API.Remoting.Solver.IModel> solverModels = await Model.GetSolverModelsAsync(new[] { AnalysisType });
+            IEnumerable<TSD.API.Remoting.Solver.IModel> solverModels = Model.GetSolverModelsAsync(new[] { AnalysisType }).Result;
             if (!solverModels.Any())
             {
                 FancyWriteLine("No solver models found!", TextColor.Error);
@@ -49,7 +49,7 @@ namespace TeklaResultsInterrogator.Core
 
             // Get mesh nodes from solver model
             Console.WriteLine("Searching for vibration solver model geometry...");
-            Nodes = (await SolverModel.GetNodesAsync(null)).OrderBy(n => n.Index);
+            Nodes = (SolverModel.GetNodesAsync(null).Result).OrderBy(n => n.Index);
             if (!Nodes.Any() || Nodes == null)
             {
                 FancyWriteLine("No solver model geometry could be found!", TextColor.Error);
@@ -59,21 +59,22 @@ namespace TeklaResultsInterrogator.Core
 
             // Get Vibration Results
             Console.WriteLine("Searching for solved vibration results...");
-            IAnalysisResults? solverResults = await SolverModel.GetResultsAsync();
+            IAnalysisResults? solverResults = SolverModel.GetResultsAsync().Result;
             if (solverResults == null)
             {
                 FancyWriteLine("No solver results found!", TextColor.Error);
                 Flag = true;
                 return;
             }
-            IVibrationResults? vibrationResults = await solverResults.GetVibrationAsync();
+            IVibrationResults? vibrationResults = solverResults.GetVibrationAsync().Result;
+            
             if (vibrationResults == null)
             {
                 FancyWriteLine("No vibration results found!", TextColor.Error);
                 Flag = true;
                 return;
             }
-            IEnumerable<Guid> solvedLoadingIDs = await vibrationResults.GetSolvedLoadingIdsAsync();
+            IEnumerable<Guid> solvedLoadingIDs = vibrationResults.GetSolvedLoadingIdsAsync().Result;
             if (!solvedLoadingIDs.Any())
             {
                 FancyWriteLine("No solved vibration loading found!", TextColor.Error);
@@ -81,7 +82,7 @@ namespace TeklaResultsInterrogator.Core
                 return;
             }
             Guid solvedLoadingID = solvedLoadingIDs.FirstOrDefault();
-            LoadingVibration = await vibrationResults.GetLoadingVibrationAsync(solvedLoadingID);
+            LoadingVibration = vibrationResults.GetLoadingVibrationAsync(solvedLoadingID).Result;
 
             // Finish up
             stopwatch.Stop();

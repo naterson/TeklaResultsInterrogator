@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using TeklaResultsInterrogator.Commands;
 
 namespace TeklaResultsInterrogator.Core
 {
@@ -98,7 +99,25 @@ namespace TeklaResultsInterrogator.Core
             }
             else
             {
-                BaseInterrogator? baseInterrogator = (BaseInterrogator?)Activator.CreateInstance(t);
+                //BaseInterrogator? baseInterrogator = (BaseInterrogator?)Activator.CreateInstance(t);
+                BaseInterrogator? baseInterrogator = null;
+                switch (commandName)
+                {
+                    case "SteelBeamForces":
+                        baseInterrogator = new SteelBeamForces();
+                        break;
+                    case "FootfallAnalysis":
+                        baseInterrogator = new FootfallAnalysis();
+                        break;
+                    case "TimberBeamForces":
+                        baseInterrogator = new TimberBeamForces();
+                        break;
+                    case "TimberColumnForces":
+                        baseInterrogator = new TimberColumnForces();
+                        break;
+                    default:
+                        break;
+                }
                 if (baseInterrogator == null)
                 {
                     Console.Write("Command ");

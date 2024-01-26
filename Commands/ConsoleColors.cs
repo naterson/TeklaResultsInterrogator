@@ -10,9 +10,9 @@ namespace TeklaResultsInterrogator.Commands
     internal class ConsoleColors : BaseInterrogator
     {
         public ConsoleColors() { }
-        public override async Task ExecuteAsync()
+        public override Task Execute()
         {
-            await InitializeAsync();
+            Initialize();
 
             ConsoleColor[] colors = (ConsoleColor[])Enum.GetValues(typeof(ConsoleColor));
             foreach (ConsoleColor color in colors)
@@ -21,7 +21,7 @@ namespace TeklaResultsInterrogator.Commands
                 Console.WriteLine($"The ConsoleColor is {color}");
             }
 
-            return;
+            return Task.CompletedTask;
 
         }
     }

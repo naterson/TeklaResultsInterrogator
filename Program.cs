@@ -24,20 +24,20 @@ namespace TeklaResultsInterrogator
 {
     internal class Program
     {
-        public static async Task Main()
+        public static Task Main()
         {
             // Initialize Menu and get Command property on completion of Menu constructor
             Menu menu = new Menu();
             var command = menu.Command;
             if (command != null )
             {
-               await command.ExecuteAsync();  // Execute command
+               command.Execute();  // Execute command
             }
             else
             {
                 Console.WriteLine("Aborted.");
                 HaltExit(true);
-                return;
+                return Task.CompletedTask;
             }
             command.Check();
             // If command executed successfully, wrap it up and exit
@@ -48,21 +48,21 @@ namespace TeklaResultsInterrogator
                 BaseInterrogator.FancyWriteLine("Command ", command.Name, $" executed successfully in {time} seconds.\nThe application will now terminate.", BaseInterrogator.TextColor.Command);
                 command.MakeHeader(true);
                 HaltExit(true);
-                return;
+                return Task.CompletedTask;
             }
             else
             {
                 BaseInterrogator.FancyWriteLine($"{command.Name} failed to execute completely. Task aborted.", BaseInterrogator.TextColor.Error);
                 HaltExit(false);
-                return;
+                return Task.CompletedTask;
             }
             
         }
         private static void HaltExit(bool success)
         {
             string name = Process.GetCurrentProcess().ProcessName;
-            string path = Environment.ProcessPath;
-            int process = Process.GetCurrentProcess().Id;
+            string? path = Environment.ProcessPath;
+            int process = Environment.ProcessId;
             string status = (success == true) ? "successfully" : "unsuccessfully";
             Console.WriteLine($"\n{name} at {path} (process {process}) executed {status}.");
             Console.WriteLine("The application will now terminate.\nPress any key to close this window . . .");

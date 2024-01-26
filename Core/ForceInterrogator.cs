@@ -26,11 +26,11 @@ namespace TeklaResultsInterrogator.Core
 
         public ForceInterrogator() { }
 
-        public override async Task InitializeAsync()  // to get solver model and other stuff here
+        public override void Initialize()  // to get solver model and other stuff here
         {
             // Set up
             Stopwatch stopwatch = Stopwatch.StartNew();
-            await InitializeBaseAsync();
+            InitializeBase();
 
             // Get 1st Order Linear SolverModel
             Console.WriteLine("Searching for analysis solver model...");
@@ -40,7 +40,7 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
-            IEnumerable<TSD.API.Remoting.Solver.IModel> solverModels = await Model.GetSolverModelsAsync(new[] { AnalysisType });
+            IEnumerable<TSD.API.Remoting.Solver.IModel> solverModels = Model.GetSolverModelsAsync(new[] { AnalysisType }).Result;
             if (!solverModels.Any())
             {
                 FancyWriteLine("No solver models found!", TextColor.Error);
@@ -58,21 +58,21 @@ namespace TeklaResultsInterrogator.Core
 
             // Get Analysis Results
             Console.WriteLine("Searching for analysis results...");
-            IAnalysisResults? solverResults = await SolverModel.GetResultsAsync();
+            IAnalysisResults? solverResults = SolverModel.GetResultsAsync().Result;
             if (solverResults == null)
             {
                 FancyWriteLine("No results found for requested analysis type!", TextColor.Error);
                 Flag = true;
                 return;
             }
-            IAnalysis3DResults? analysis3Dresults = await solverResults.GetAnalysis3DAsync();
+            IAnalysis3DResults? analysis3Dresults = solverResults.GetAnalysis3DAsync().Result;
             if (analysis3Dresults == null)
             {
                 FancyWriteLine("No 3-D analysis results found for requested analysis type!", TextColor.Error);
                 Flag = true;
                 return;
             }
-            var solvedLoadingGuids = await analysis3Dresults.GetSolvedLoadingIdsAsync();
+            var solvedLoadingGuids = analysis3Dresults.GetSolvedLoadingIdsAsync().Result;
             if (!solvedLoadingGuids.Any())
             {
                 FancyWriteLine("No solved loading GUIDs found!", TextColor.Error);
@@ -82,7 +82,7 @@ namespace TeklaResultsInterrogator.Core
 
             // Get members
             Console.WriteLine("Searching for members...");
-            IEnumerable<IMember>? allMembers = await Model.GetMembersAsync(null);
+            IEnumerable<IMember>? allMembers = Model.GetMembersAsync(null).Result;
             if (!allMembers.Any() || allMembers == null)
             {
                 FancyWriteLine("No members found!", TextColor.Error);
@@ -93,7 +93,7 @@ namespace TeklaResultsInterrogator.Core
 
             // Get solved loadcases
             Console.WriteLine("Searching for solved loadcases...");
-            IEnumerable<ILoadcase> loadingCases = await Model.GetLoadcasesAsync(null);
+            IEnumerable<ILoadcase> loadingCases = Model.GetLoadcasesAsync(null).Result;
             if (!loadingCases.Any())
             {
                 FancyWriteLine("No loadcases found!", TextColor.Warning);
@@ -108,7 +108,7 @@ namespace TeklaResultsInterrogator.Core
 
             // Get solved load combos
             Console.WriteLine("Searching for solved load combinations...");
-            IEnumerable<ICombination> loadingCombinations = await Model.GetCombinationsAsync(null);
+            IEnumerable<ICombination> loadingCombinations = Model.GetCombinationsAsync(null).Result;
             if (!loadingCombinations.Any())
             {
                 FancyWriteLine("No load combinations found!", TextColor.Warning);
@@ -123,7 +123,7 @@ namespace TeklaResultsInterrogator.Core
 
             // Get solved load envelopes
             Console.WriteLine("Searching for solved load envelopes...");
-            IEnumerable<IEnvelope> loadingEnvelopes = await Model.GetEnvelopesAsync(null);
+            IEnumerable<IEnvelope> loadingEnvelopes = Model.GetEnvelopesAsync(null).Result;
             if (!loadingEnvelopes.Any())
             {
                 FancyWriteLine("No load envelopes found!", TextColor.Warning);

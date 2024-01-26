@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Optimization;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -19,15 +20,15 @@ namespace TeklaResultsInterrogator.Commands
         }
 
         // Main routines here to be called after initialization
-        public override async Task ExecuteAsync()
+        public override Task Execute()
         {
             // Initialize parents
-            await InitializeAsync();
+            Initialize();
 
             // Check for null properties
             if (Flag)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             // Data setup and diagnostics initialization; declare locals here
@@ -41,7 +42,7 @@ namespace TeklaResultsInterrogator.Commands
 
             Check();
 
-            return;
+            return Task.CompletedTask;
         }
 
 
