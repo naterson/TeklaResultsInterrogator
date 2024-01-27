@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Text;
-
 using TSD.API.Remoting;
 using TSD.API.Remoting.Document;
 using TSD.API.Remoting.Loading;
@@ -9,16 +8,15 @@ using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Common;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
 using Google.Protobuf.WellKnownTypes;
+using MathNet.Numerics.Providers.SparseSolver;
 
 namespace TeklaResultsInterrogator.Core
 {
     public class ForceInterrogator : BaseInterrogator
     {
-        
         protected AnalysisType AnalysisType = AnalysisType.FirstOrderLinear;
 
         protected List<MemberConstruction> RequestedMemberType = new List<MemberConstruction>();
-       
         protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
         protected List<ILoadcase>? AllLoadcases { get; set; }
         protected List<ILoadcase>? SolvedCases { get; set; }
@@ -27,7 +25,6 @@ namespace TeklaResultsInterrogator.Core
         protected List<IEnvelope>? AllEnvelopes { get; set; }
         protected List<IEnvelope>? SolvedEnvelopes { get; set; }
         protected List<IMember>? AllMembers { get; set; }
-
         public ForceInterrogator() { }
 
         public override async Task InitializeAsync()  // to get solver model and other stuff here
@@ -62,7 +59,7 @@ namespace TeklaResultsInterrogator.Core
                 return;
             }
             SolverModel = solverModel;
-
+    
             // Get Analysis Results
             Console.WriteLine("Searching for analysis results...");
             IAnalysisResults? solverResults = await SolverModel.GetResultsAsync();

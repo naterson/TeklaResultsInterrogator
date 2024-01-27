@@ -13,11 +13,15 @@ using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Sections;
 using TSD.API.Remoting.Common;
+using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+//using static Google.Protobuf.Collections.MapField<TKey, TValue>;
 
 namespace TeklaResultsInterrogator.Commands
 {
     public class SteelBraceForces : ForceInterrogator
-    {
+    {        
 
         public SteelBraceForces() 
         {
@@ -25,17 +29,19 @@ namespace TeklaResultsInterrogator.Commands
             AnalysisType = AnalysisType.SecondOrderLinear;
             RequestedMemberType = new List<MemberConstruction>() {MemberConstruction.SteelBrace};
         }
-
+        
         public override async Task ExecuteAsync()
         {
             // Initialize parents
-            await InitializeAsync();
+            await InitializeAsync();         
 
             // Check for null properties
             if (Flag)
             {
                 return;
             }
+
+            //var Nodes = await SolverModel.GetNodesAsync(null);
 
             // Data setup and diagnostics initialization
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -94,10 +100,11 @@ namespace TeklaResultsInterrogator.Commands
             // Setting up file
             double start1 = timeUnpack;
             string file1 = SaveDirectory + @"SteelBraceForces_" + FileName + ".csv";
-            string header1 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10} \n",
-                "Tekla GUID", "Member Name", "Level", "Shape", "Material", 
-                "Start Node", "End Node","Span Length [ft]", "Span Rotation [deg]","Loading Name", 
-                "Axial Force [k]");
+            string header1 = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17} \n",
+                "Tekla GUID", "Member Name", "Level","Grid", "Shape", "Material", 
+                "Start Node", "Start Node X", "Start Node Y", "Start Node Z", "End Node", "End Node X", "End Node Y", "End Node Z",
+                "Span Length [ft]", "Span Rotation [deg]","Loading Name", "Axial Force [k]");
+            
             File.WriteAllText(file1, ""); // Bug will throw an exception if the user has the excel file open ekj
             File.AppendAllText(file1, header1);
 
@@ -106,6 +113,7 @@ namespace TeklaResultsInterrogator.Commands
             FancyWriteLine("\nWriting internal forces table...", TextColor.Title);
             using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
             {
+                
                 foreach (IMember member in steelBraces)
                 {
                     string name = member.Name;
@@ -114,7 +122,9 @@ namespace TeklaResultsInterrogator.Commands
 
                     int constructionPointIndex = member.MemberNodes.Value.First().Value.ConstructionPointIndex.Value;
                     IEnumerable<IConstructionPoint> constructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { constructionPointIndex });
+                    
                     int planeId = constructionPoints.First().PlaneInfo.Value.Index;
+
                     IEnumerable<IHorizontalConstructionPlane> level = await Model.GetLevelsAsync(new List<int>() { planeId });
                     string levelName;
                     if (level.Any())
@@ -125,8 +135,18 @@ namespace TeklaResultsInterrogator.Commands
                     {
                         levelName = "Not Associated";
                     }
-                    
 
+                    IEnumerable<IVerticalConstructionPlane> grid = await Model.GetFramesAsync(new List<int>() { planeId }); //this is not getting the right thing, not sure where to get the correct index of the gir
+                    string gridName;
+                    if (grid.Any())
+                    {
+                        gridName = grid.First().Name;
+                    }
+                    else
+                    {
+                        gridName = "NotAssociated";
+                    }
+    
 
                     foreach (IMemberSpan span in spans)
                     {
@@ -140,12 +160,37 @@ namespace TeklaResultsInterrogator.Commands
                         string materialGrade = span.Material.Value.Name;
 
                         int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
-                        
                         int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
 
-                        string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}",
-                            id, name, levelName, sectionName, materialGrade,
-                            startNodeIdx, endNodeIdx, lengthFt, rot);
+                        double? sux = null;  // Nodal coordinates [ft]
+                        double? suy = null;
+                        double? suz = null;
+
+                        double? eux = null;  // nodal coordinates [ft]
+                        double? euy = null;
+                        double? euz = null;
+
+                        IEnumerable<IConstructionPoint> allconstructionPoints = await Model.GetConstructionPointsAsync(null);
+
+                        foreach (IConstructionPoint node in allconstructionPoints) // I think this could be written faster by just looping through the start and end points which we get by index above
+                        {
+                            if (node.Index == startNodeIdx)
+                            {
+                                sux = node.Coordinates.Value.X * 0.00328084;  // Nodal coordinates [ft]
+                                suy = node.Coordinates.Value.Y * 0.00328084;
+                                suz = node.Coordinates.Value.Z * 0.00328084;
+                            } 
+                            else if (node.Index == endNodeIdx)
+                            {
+                                eux = node.Coordinates.Value.X * 0.00328084;  // nodal coordinates [ft]
+                                euy = node.Coordinates.Value.Y * 0.00328084;
+                                euz = node.Coordinates.Value.Z * 0.00328084;
+                            }
+                        }
+                           
+                        string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15}",
+                            id, name, levelName, gridName, sectionName, materialGrade,
+                            startNodeIdx,sux,suy,suz,endNodeIdx,eux,euy,euz,lengthFt, rot);
 
                         if (subdivisions == 0)
                         {
