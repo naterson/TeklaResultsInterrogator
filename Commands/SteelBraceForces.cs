@@ -1,35 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Common;
+﻿//using System;
+//using System.Collections.Generic;
+//using System.Data.Common;
 using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Runtime.CompilerServices;
+//using System.Drawing;
+//using System.Linq;
+//using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
+//using System.Threading.Tasks;
+using System.Numerics;
 using TeklaResultsInterrogator.Core;
 using TSD.API.Remoting.Loading;
-using TSD.API.Remoting.Solver;
+//using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Sections;
-using TSD.API.Remoting.Common;
+//using TSD.API.Remoting.Common;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
+using MathNet.Numerics.LinearAlgebra;
+//using System.Text.RegularExpressions;
+//using System.Xml.Linq;
+//using MathNet.Numerics.LinearAlgebra.Complex;
+//using System.Security.Cryptography.X509Certificates;
+//using Grpc.Core.Utils;
 //using static Google.Protobuf.Collections.MapField<TKey, TValue>;
+
+
 
 namespace TeklaResultsInterrogator.Commands
 {
+
     public class SteelBraceForces : ForceInterrogator
-    {        
+    {
 
         public SteelBraceForces() 
         {
             HasOutput = true;
             AnalysisType = AnalysisType.SecondOrderLinear;
-            RequestedMemberType = new List<MemberConstruction>() {MemberConstruction.SteelBrace};
+            RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.SteelBrace };
         }
-        
+
+
+        static double? mm2ft(double? mm) { 
+            return mm * 0.00328084;
+        }
+
+
         public override async Task ExecuteAsync()
         {
             // Initialize parents
@@ -40,8 +54,6 @@ namespace TeklaResultsInterrogator.Commands
             {
                 return;
             }
-
-            //var Nodes = await SolverModel.GetNodesAsync(null);
 
             // Data setup and diagnostics initialization
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -136,24 +148,16 @@ namespace TeklaResultsInterrogator.Commands
                         levelName = "Not Associated";
                     }
 
-                    IEnumerable<IVerticalConstructionPlane> grid = await Model.GetFramesAsync(new List<int>() { planeId }); //this is not getting the right thing, not sure where to get the correct index of the gir
-                    string gridName;
-                    if (grid.Any())
-                    {
-                        gridName = grid.First().Name;
-                    }
-                    else
-                    {
-                        gridName = "NotAssociated";
-                    }
-    
+                    int gridId = constructionPoints.Last().PlaneInfo.Value.Index;
+
+                    IEnumerable<IVerticalConstructionPlane> grids = await Model.GetFramesAsync(null); //this is not getting the right thing, not sure where to get the correct index of the gir
 
                     foreach (IMemberSpan span in spans)
                     {
                         //string spanName = span.Name;
                         int spanIdx = span.Index;
-                        double length = span.Length.Value;
-                        double lengthFt = length * 0.00328084; // Converting from [mm] to [ft]
+                        double? length = span.Length.Value;
+                        double? lengthFt = mm2ft(length); // Converting from [mm] to [ft]
                         double rot = Math.Round(span.RotationAngle.Value * 57.2958, 3); // Converting from [rad] to [deg]
                         IMemberSection section = (IMemberSection)span.ElementSection.Value;
                         string sectionName = section.PhysicalSection.Value.LongName;
@@ -176,21 +180,45 @@ namespace TeklaResultsInterrogator.Commands
                         {
                             if (node.Index == startNodeIdx)
                             {
-                                sux = node.Coordinates.Value.X * 0.00328084;  // Nodal coordinates [ft]
-                                suy = node.Coordinates.Value.Y * 0.00328084;
-                                suz = node.Coordinates.Value.Z * 0.00328084;
+                                sux = node.Coordinates.Value.X;
+                                suy = node.Coordinates.Value.Y; 
+                                suz = node.Coordinates.Value.Z; 
                             } 
                             else if (node.Index == endNodeIdx)
                             {
-                                eux = node.Coordinates.Value.X * 0.00328084;  // nodal coordinates [ft]
-                                euy = node.Coordinates.Value.Y * 0.00328084;
-                                euz = node.Coordinates.Value.Z * 0.00328084;
+                                eux = node.Coordinates.Value.X;  
+                                euy = node.Coordinates.Value.Y;
+                                euz = node.Coordinates.Value.Z;
                             }
                         }
-                           
+
+                        string gridName = "";
+
+                        foreach (IConstructionPlane plane in grids)
+                        {
+                            // Gets the components of the normal vector to the plane
+                            double? N_X = plane.Plane.Value.Normal.Value.X;
+                            double? N_Y = plane.Plane.Value.Normal.Value.Y;
+                            double? N_Z = plane.Plane.Value.Normal.Value.Z;
+
+                            // Gets the coordinates of the origin of the plane
+                            double? gridOX = plane.Plane.Value.Origin.Value.X;
+                            double? gridOY = plane.Plane.Value.Origin.Value.Y;
+                            double? gridOZ = plane.Plane.Value.Origin.Value.Z;
+
+                            // Use the DOT product to test if the line is on the plane
+                            double? line_on_plane_test = (eux - gridOX) * N_X + (euy - gridOY) * N_Y + (euz - gridOZ) * N_Z;
+
+                            if (line_on_plane_test == 0) 
+                            {
+                                gridName = plane.Name;
+                            }
+                                                    
+                        }
+
                         string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15}",
                             id, name, levelName, gridName, sectionName, materialGrade,
-                            startNodeIdx,sux,suy,suz,endNodeIdx,eux,euy,euz,lengthFt, rot);
+                            startNodeIdx, mm2ft(sux), mm2ft(suy), mm2ft(suz), endNodeIdx, mm2ft(eux), mm2ft(euy), mm2ft(euz), lengthFt, rot);
 
                         if (subdivisions == 0)
                         {
