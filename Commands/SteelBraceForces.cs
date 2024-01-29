@@ -16,6 +16,7 @@ using TSD.API.Remoting.Sections;
 //using TSD.API.Remoting.Common;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
 using MathNet.Numerics.LinearAlgebra;
+using System;
 //using System.Text.RegularExpressions;
 //using System.Xml.Linq;
 //using MathNet.Numerics.LinearAlgebra.Complex;
@@ -39,9 +40,96 @@ namespace TeklaResultsInterrogator.Commands
         }
 
 
-        static double? mm2ft(double? mm) { 
+        static double? mm2ft(double? mm) 
+        { 
             return mm * 0.00328084;
         }
+
+
+        static double[] GetStartSpanCoordinates(IMemberSpan a_span) 
+        {
+            
+            int startNodeIdx = a_span.StartMemberNode.ConstructionPointIndex.Value;
+            //int endNodeIdx = a_span.EndMemberNode.ConstructionPointIndex.Value;
+
+            IEnumerable<IConstructionPoint> allconstructionPoints = Model.GetConstructionPointsAsync(null);
+
+            foreach (IConstructionPoint node in allconstructionPoints) 
+            {
+                if (node.Index == startNodeIdx)
+                {
+                    double[] NodeCoords = { node.Coordinates.Value.X, node.Coordinates.Value.Y, node.Coordinates.Value.Z };
+                    return (NodeCoords);
+                }
+            }
+        }
+
+        static double[] GetEndSpanCoordinates(IMemberSpan a_span)
+        {
+
+            //int startNodeIdx = a_span.StartMemberNode.ConstructionPointIndex.Value;
+            int endNodeIdx = a_span.EndMemberNode.ConstructionPointIndex.Value;
+
+            IEnumerable<IConstructionPoint> allconstructionPoints = Model.GetConstructionPointsAsync(null);
+
+            foreach (IConstructionPoint node in allconstructionPoints)
+            {
+                if (node.Index == endNodeIdx)
+                {
+                    double[] NodeCoords = { node.Coordinates.Value.X, node.Coordinates.Value.Y, node.Coordinates.Value.Z };
+                    return (NodeCoords);
+                }
+            }
+        }
+
+        static string GetSpanPlane(IMemberSpan a_span) 
+        {
+
+            string gridName = "Unknown";
+
+            int startNodeIdx = a_span.StartMemberNode.ConstructionPointIndex.Value;
+            int endNodeIdx = a_span.EndMemberNode.ConstructionPointIndex.Value;
+
+            double? sux = null;  // Nodal coordinates [ft]
+            double? suy = null;
+            double? suz = null;
+
+            double? eux = null;  // nodal coordinates [ft]
+            double? euy = null;
+            double? euz = null;
+
+            IEnumerable<IConstructionPoint> allconstructionPoints = Model.GetConstructionPointsAsync(null);
+
+                    sux = GetStartSpanCoordinates(a_span)[0];
+                    suy = GetStartSpanCoordinates(a_span)[1];
+                    suz = GetStartSpanCoordinates(a_span)[2];
+
+            IEnumerable<IVerticalConstructionPlane> grids = Model.GetFramesAsync(null); 
+
+            foreach (IConstructionPlane plane in grids)
+            {
+                // Gets the components of the normal vector to the plane
+                double? N_X = plane.Plane.Value.Normal.Value.X;
+                double? N_Y = plane.Plane.Value.Normal.Value.Y;
+                double? N_Z = plane.Plane.Value.Normal.Value.Z;
+
+                // Gets the coordinates of the origin of the plane
+                double? gridOX = plane.Plane.Value.Origin.Value.X;
+                double? gridOY = plane.Plane.Value.Origin.Value.Y;
+                double? gridOZ = plane.Plane.Value.Origin.Value.Z;
+
+                // Use the DOT product to test if the line is on the plane
+                double? line_on_plane_test = (eux - gridOX) * N_X + (euy - gridOY) * N_Y + (euz - gridOZ) * N_Z;
+
+                if (line_on_plane_test == 0)
+                {
+                    gridName = plane.Name;
+                }
+             }
+
+            return gridName;
+        }
+
 
 
         public override async Task ExecuteAsync()
@@ -150,8 +238,6 @@ namespace TeklaResultsInterrogator.Commands
 
                     int gridId = constructionPoints.Last().PlaneInfo.Value.Index;
 
-                    IEnumerable<IVerticalConstructionPlane> grids = await Model.GetFramesAsync(null); //this is not getting the right thing, not sure where to get the correct index of the gir
-
                     foreach (IMemberSpan span in spans)
                     {
                         //string spanName = span.Name;
@@ -166,55 +252,17 @@ namespace TeklaResultsInterrogator.Commands
                         int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
                         int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
 
-                        double? sux = null;  // Nodal coordinates [ft]
-                        double? suy = null;
-                        double? suz = null;
+                        double sux = GetStartSpanCoordinates(span)[0];
+                        double suy = GetStartSpanCoordinates(span)[1];
+                        double suz = GetStartSpanCoordinates(span)[2];
 
-                        double? eux = null;  // nodal coordinates [ft]
-                        double? euy = null;
-                        double? euz = null;
-
-                        IEnumerable<IConstructionPoint> allconstructionPoints = await Model.GetConstructionPointsAsync(null);
-
-                        foreach (IConstructionPoint node in allconstructionPoints) // I think this could be written faster by just looping through the start and end points which we get by index above
-                        {
-                            if (node.Index == startNodeIdx)
-                            {
-                                sux = node.Coordinates.Value.X;
-                                suy = node.Coordinates.Value.Y; 
-                                suz = node.Coordinates.Value.Z; 
-                            } 
-                            else if (node.Index == endNodeIdx)
-                            {
-                                eux = node.Coordinates.Value.X;  
-                                euy = node.Coordinates.Value.Y;
-                                euz = node.Coordinates.Value.Z;
-                            }
-                        }
+                        double eux = GetEndSpanCoordinates(span)[0];
+                        double euy = GetEndSpanCoordinates(span)[1];
+                        double euz = GetEndSpanCoordinates(span)[2];
 
                         string gridName = "";
 
-                        foreach (IConstructionPlane plane in grids)
-                        {
-                            // Gets the components of the normal vector to the plane
-                            double? N_X = plane.Plane.Value.Normal.Value.X;
-                            double? N_Y = plane.Plane.Value.Normal.Value.Y;
-                            double? N_Z = plane.Plane.Value.Normal.Value.Z;
-
-                            // Gets the coordinates of the origin of the plane
-                            double? gridOX = plane.Plane.Value.Origin.Value.X;
-                            double? gridOY = plane.Plane.Value.Origin.Value.Y;
-                            double? gridOZ = plane.Plane.Value.Origin.Value.Z;
-
-                            // Use the DOT product to test if the line is on the plane
-                            double? line_on_plane_test = (eux - gridOX) * N_X + (euy - gridOY) * N_Y + (euz - gridOZ) * N_Z;
-
-                            if (line_on_plane_test == 0) 
-                            {
-                                gridName = plane.Name;
-                            }
-                                                    
-                        }
+                        gridName = GetSpanPlane(span);
 
                         string spanLineOnly = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15}",
                             id, name, levelName, gridName, sectionName, materialGrade,

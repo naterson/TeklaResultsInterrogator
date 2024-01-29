@@ -328,5 +328,9 @@ namespace TeklaResultsInterrogator.Core
             } while (reduced == null);
             return (bool)reduced;
         }
+    
+    
+    
+    
     }
 }
