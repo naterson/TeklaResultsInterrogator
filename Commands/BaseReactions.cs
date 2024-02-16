@@ -31,9 +31,8 @@ public class basereactions : ForceInterrogator  // Should inherit a parent Inter
         }
 
         public void WriteToCsv(List<string> headers, List<object[]> data, string filePath)
-        {
-            try
-            {
+        { 
+            
                 using (var writer = new StreamWriter(filePath))
                 {
                     // Write headers
@@ -45,23 +44,16 @@ public class basereactions : ForceInterrogator  // Should inherit a parent Inter
                         writer.WriteLine(string.Join(",", row));
                     }
                 }
-
-                Console.WriteLine($"Data successfully written to {filePath}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error writing to CSV: {ex.Message}");
-            }
         }
 
-        public double ToLb(double newton) 
+        public double ToK(double newton) 
         {
-            return newton * 0.224809;
+            return newton * 0.0002248089;
         }
 
-        public double ToLbFt(double newtonmeters)
+        public double ToKFt(double newtonmillimeters)
         {
-            return newtonmeters / 1.356;
+            return newtonmillimeters * 0.000000737562121169657;
         }
 
         public double ToFt(double millimeters)
@@ -98,7 +90,7 @@ public class basereactions : ForceInterrogator  // Should inherit a parent Inter
                     {
                         IForce3DGlobal reaction = await support.GetSupportReactionAsync(loadcase.Id, false);
                         IConstructionPoint my_point = constructionPoints.Where(pt => pt.SolverNodeIndex.Value.Equals(support.Index)).First();
-                        object[] support_reactions = { support.Index, my_point.Name, ToFt(support.Coordinates.X),ToFt(support.Coordinates.Y),ToFt(support.Coordinates.Z),loadcase.Name, ToLb(reaction.Fx), ToLb(reaction.Fy), ToLb(reaction.Fz), ToLbFt(reaction.Mx), ToLbFt(reaction.My), ToLbFt(reaction.Mz) };
+                        object[] support_reactions = { support.Index, my_point.Name, ToFt(support.Coordinates.X),ToFt(support.Coordinates.Y),ToFt(support.Coordinates.Z),loadcase.Name, ToK(reaction.Fx), ToK(reaction.Fy), ToK(reaction.Fz), ToKFt(reaction.Mx), ToKFt(reaction.My), ToKFt(reaction.Mz) };
                         reactions.Add(support_reactions);
                     }
                 }
