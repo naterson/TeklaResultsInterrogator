@@ -22,7 +22,6 @@ namespace TeklaResultsInterrogator.Commands
             }
 
             return;
-
         }
     }
 }
