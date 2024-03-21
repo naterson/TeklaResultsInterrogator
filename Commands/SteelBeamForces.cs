@@ -54,7 +54,7 @@ namespace TeklaResultsInterrogator.Commands
             FancyWriteLine("\nMember summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
 
-            List<IMember> steelBeams = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value)).ToList();
+            List<IMember> steelBeams = AllMembers.Where(c => RequestedMemberType.Contains(GetProperty(c.Data.Value.Construction))).ToList();
 
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
             Console.WriteLine($"{steelBeams.Count} steel beams found.");
@@ -121,14 +121,14 @@ namespace TeklaResultsInterrogator.Commands
 
                         int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
                         string startNodeFixity = span.StartReleases.Value.DegreeOfFreedom.Value.ToString();
-                        if (span.StartReleases.Value.Cantilever.Value == true)
+                        if (GetProperty(span.StartReleases.Value.Cantilever) == true)
                         {
                             startNodeFixity += " (Cantilever end)";
                         }
                         startNodeFixity = startNodeFixity.Replace(',', '|');
                         int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
                         string endNodeFixity = span.EndReleases.Value.DegreeOfFreedom.Value.ToString();
-                        if (span.EndReleases.Value.Cantilever.Value == true)
+                        if (GetProperty(span.EndReleases.Value.Cantilever) == true)
                         {
                             endNodeFixity += " (Cantilever end)";
                         }
