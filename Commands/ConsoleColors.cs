@@ -14,6 +14,8 @@ namespace TeklaResultsInterrogator.Commands
         {
             await InitializeAsync();
 
+            string a = "apple"
+
             ConsoleColor[] colors = (ConsoleColor[])Enum.GetValues(typeof(ConsoleColor));
             foreach (ConsoleColor color in colors)
             {
