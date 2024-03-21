@@ -2,6 +2,7 @@
 using TSD.API.Remoting.Document;
 using System.Diagnostics;
 using System.Reflection;
+using TSD.API.Remoting.Common.Properties;
 
 namespace TeklaResultsInterrogator.Core
 {
@@ -165,13 +166,61 @@ namespace TeklaResultsInterrogator.Core
             Console.ForegroundColor = (ConsoleColor)TextColor.Text;
         }
 
-        public string? AskUser(string prompt)
+        public static string? AskUser(string prompt)
         {
             Console.Write(prompt);
             Console.ForegroundColor = (ConsoleColor)TextColor.Command;
             string? readIn = Console.ReadLine();
             Console.ForegroundColor = (ConsoleColor)TextColor.Text;
             return readIn;
+        }
+
+        public static T? GetProperty<T>(IReadOnlyProperty<T> property)
+        {
+            if (property.IsApplicable == true)
+            {
+                return property.Value;
+            }
+            else
+            {
+                return default;
+            }
+        }
+
+        public static T? GetProperty<T>(IProperty<T> property)
+        {
+            if (property.IsApplicable == true)
+            {
+                return property.Value;
+            }
+            else
+            {
+                return default;
+            }
+        }
+
+        public static bool? GetProperty(IReadOnlyProperty<bool> property)
+        {
+            if (property.IsApplicable == true)
+            {
+                return property.Value;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public static bool? GetProperty(IProperty<bool> property)
+        {
+            if (property.IsApplicable == true)
+            {
+                return property.Value;
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 }

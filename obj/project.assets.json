@@ -251,7 +251,7 @@
           }
         }
       },
-      "TeklaStructuralDesigner.RemotingAPI/23.0.0": {
+      "TeklaStructuralDesigner.RemotingAPI/23.2.0": {
         "type": "package",
         "dependencies": {
           "Google.Protobuf": "3.21.9",
@@ -737,10 +737,10 @@
         "version.txt"
       ]
     },
-    "TeklaStructuralDesigner.RemotingAPI/23.0.0": {
-      "sha512": "6GvDvzdJwi097ZUjGNz9UA0SkpppEpcIdiFVOGiNgk4PBEIpdiYKS53VT+X3DsNDlnr4JSUI3ghxHucNhdH4gA==",
+    "TeklaStructuralDesigner.RemotingAPI/23.2.0": {
+      "sha512": "wYEKt/tOa6HMJ7otJEVzpwoz/+D1UuW7l1n5chDtTHLsfEgoswH4zCJUpEnTY5/MCGZwvj13OwZHO11RsZW3QQ==",
       "type": "package",
-      "path": "teklastructuraldesigner.remotingapi/23.0.0",
+      "path": "teklastructuraldesigner.remotingapi/23.2.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -750,7 +750,7 @@
         "lib/net6.0-windows7.0/TSD.API.Remoting.xml",
         "lib/netstandard2.1/TSD.API.Remoting.dll",
         "lib/netstandard2.1/TSD.API.Remoting.xml",
-        "teklastructuraldesigner.remotingapi.23.0.0.nupkg.sha512",
+        "teklastructuraldesigner.remotingapi.23.2.0.nupkg.sha512",
         "teklastructuraldesigner.remotingapi.nuspec"
       ]
     }
@@ -758,7 +758,7 @@
   "projectFileDependencyGroups": {
     "net6.0": [
       "MathNet.Numerics >= 5.0.0",
-      "TeklaStructuralDesigner.RemotingAPI >= 23.0.0"
+      "TeklaStructuralDesigner.RemotingAPI >= 23.2.0"
     ]
   },
   "packageFolders": {
@@ -811,7 +811,7 @@
           },
           "TeklaStructuralDesigner.RemotingAPI": {
             "target": "Package",
-            "version": "[23.0.0, )"
+            "version": "[23.2.0, )"
           }
         },
         "imports": [

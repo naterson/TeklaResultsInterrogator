@@ -22,7 +22,7 @@ namespace TeklaResultsInterrogator.Commands
         public BRForces()
         {
             HasOutput = false;  // Only explicitly declare properties in constructor body
-            AnalysisType = AnalysisType.SecondOrderLinear;
+            AnalysisType = AnalysisType.FirstOrderLinear;
             RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.SteelBeam, MemberConstruction.SteelColumn };
         }
 
@@ -72,8 +72,12 @@ namespace TeklaResultsInterrogator.Commands
                 }
             }
 
+            var sel = await Model.GetSelectedEntitiesAsync();
+            ISubModels subModels = await Model.GetSubModelsAsync();
+            IEnumerable<ISubModel> subModel = await subModels.GetSubModelAsync();
+
             List<IMember> steelMembers = AllMembers.Where(c => RequestedMemberType.Contains(c.Data.Value.Construction.Value)).ToList();
-            steelMembers = steelMembers.Where(c => filterIDs.Contains(c.Name)).ToList();
+            //steelMembers = steelMembers.Where(c => filterIDs.Contains(c.Name)).ToList();
             List<IMember> steelBeams = steelMembers.Where(c => c.Data.Value.Construction.Value == MemberConstruction.SteelBeam).ToList();
             List<IMember> steelColumns = steelMembers.Where(c => c.Data.Value.Construction.Value == MemberConstruction.SteelColumn).ToList();
 
