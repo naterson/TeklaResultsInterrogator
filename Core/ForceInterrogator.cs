@@ -41,6 +41,7 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
+            Console.WriteLine($"Using {AnalysisType}");
             IEnumerable<TSD.API.Remoting.Solver.IModel> solverModels = await Model.GetSolverModelsAsync(new[] { AnalysisType });
             if (!solverModels.Any())
             {

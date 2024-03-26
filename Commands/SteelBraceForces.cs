@@ -34,7 +34,7 @@ namespace TeklaResultsInterrogator.Commands
         public SteelBraceForces() 
         {
             HasOutput = true;
-            AnalysisType = AnalysisType.FirstOrderLinear;
+            AnalysisType = AnalysisType.SecondOrderLinear;
             RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.SteelBrace };
         }
 
