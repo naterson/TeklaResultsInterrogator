@@ -20,7 +20,8 @@ namespace TeklaResultsInterrogator.Commands
         public SteelBeamForces()
         {
             HasOutput = true;
-            RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.SteelBeam, MemberConstruction.CompositeBeam };
+            RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.SteelBeam, MemberConstruction.CompositeBeam};
+            
         }
 
         public override async Task ExecuteAsync()
@@ -53,7 +54,7 @@ namespace TeklaResultsInterrogator.Commands
             // Unpacking member data
             FancyWriteLine("\nMember summary:", TextColor.Title);
             Console.WriteLine("Unpacking member data...");
-
+            
             List<IMember> steelBeams = AllMembers.Where(c => RequestedMemberType.Contains(GetProperty(c.Data.Value.Construction))).ToList();
 
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
@@ -81,6 +82,7 @@ namespace TeklaResultsInterrogator.Commands
                 "Axial Force [k]", "Torsion [k-ft]", "Deflection Major [in]", "Deflection Minor [in]");
             File.WriteAllText(file1, "");
             File.AppendAllText(file1, header1);
+
 
             // Getting internal forces and writing table
             FancyWriteLine("\nWriting internal forces table...", TextColor.Title);
