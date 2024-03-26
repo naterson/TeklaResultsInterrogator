@@ -26,7 +26,7 @@ public class basereactions : ForceInterrogator  // Should inherit a parent Inter
         // Leave class constructor parameterless
         public basereactions()
         {
-            HasOutput = false;  // Only explicitly declare properties in constructor body
+            HasOutput = true;  // Only explicitly declare properties in constructor body
 
         }
 
@@ -98,7 +98,7 @@ public class basereactions : ForceInterrogator  // Should inherit a parent Inter
                         
             var header = new List<string>() {"SolverNodeId", "Support Name", "x","y","z","Loading", "Fx", "Fy", "Fz", "Mx", "My", "Mz"};
 
-            string file = SaveDirectory + @"Reactions_" + FileName + ".csv";
+            string file = SaveDirectory  + @"\Reactions_" + FileName + ".csv";
 
             WriteToCsv(header, reactions, file);
 
