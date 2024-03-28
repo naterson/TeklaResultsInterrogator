@@ -16,6 +16,8 @@ using TSD.API.Remoting.Sections;
 //using TSD.API.Remoting.Common;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
 using MathNet.Numerics.LinearAlgebra;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
 //using System.Text.RegularExpressions;
 //using System.Xml.Linq;
 //using MathNet.Numerics.LinearAlgebra.Complex;

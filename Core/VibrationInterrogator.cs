@@ -1,5 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
+
 using TSD.API.Remoting;
 using TSD.API.Remoting.Document;
 using TSD.API.Remoting.Loading;

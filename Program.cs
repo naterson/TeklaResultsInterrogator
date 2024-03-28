@@ -19,6 +19,9 @@ using TeklaResultsInterrogator.Core;
 using TeklaResultsInterrogator.Commands;
 using System.Reflection;
 using System.Diagnostics;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
+
 
 namespace TeklaResultsInterrogator
 {
@@ -45,14 +48,14 @@ namespace TeklaResultsInterrogator
             {
                 double time = Math.Round(command.InitializationTime + command.ExecutionTime, 3);
                 command.MakeHeader(true);
-                BaseInterrogator.FancyWriteLine("Command ", command.Name, $" executed successfully in {time} seconds.\nThe application will now terminate.", BaseInterrogator.TextColor.Command);
+                FancyWriteLine("Command ", command.Name, $" executed successfully in {time} seconds.\nThe application will now terminate.", TextColor.Command);
                 command.MakeHeader(true);
                 HaltExit(true);
                 return;
             }
             else
             {
-                BaseInterrogator.FancyWriteLine($"{command.Name} failed to execute completely. Task aborted.", BaseInterrogator.TextColor.Error);
+                FancyWriteLine($"{command.Name} failed to execute completely. Task aborted.", TextColor.Error);
                 HaltExit(false);
                 return;
             }

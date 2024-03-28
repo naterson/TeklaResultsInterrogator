@@ -12,6 +12,8 @@ using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Sections;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
 
 namespace TeklaResultsInterrogator.Commands
 {
