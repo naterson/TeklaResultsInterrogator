@@ -32,5 +32,20 @@ namespace TeklaResultsInterrogator.Utils
             }
             return valCon;
         }
+
+        public static double ToK(double newton)
+        {
+            return newton * 0.0002248089;
+        }
+
+        public static double ToKFt(double newtonmillimeters)
+        {
+            return newtonmillimeters * 0.000000737562121169657;
+        }
+
+        public static double mm2ft(double mm)
+        {
+            return mm * 0.00328084;
+        }
     }
 }

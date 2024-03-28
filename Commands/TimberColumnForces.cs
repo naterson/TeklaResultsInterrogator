@@ -17,7 +17,7 @@ using static TeklaResultsInterrogator.Utils.Utils;
 
 namespace TeklaResultsInterrogator.Commands
 {
-    internal class TimberColumnForces : ForceInterrogator
+    public class TimberColumnForces : ForceInterrogator
     {
         public TimberColumnForces()
         {
