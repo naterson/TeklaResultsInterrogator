@@ -2,6 +2,9 @@
 using TSD.API.Remoting.Document;
 using System.Diagnostics;
 using System.Reflection;
+using TSD.API.Remoting.Common.Properties;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
 
 namespace TeklaResultsInterrogator.Core
 {
@@ -135,42 +138,6 @@ namespace TeklaResultsInterrogator.Core
                 Console.ForegroundColor = (ConsoleColor)TextColor.Text;
                 Console.WriteLine(banner);
             }
-        }
-
-        public enum TextColor
-        {
-            Text = ConsoleColor.White,
-            Command = ConsoleColor.Green,
-            Title = ConsoleColor.DarkCyan,
-            Path = ConsoleColor.DarkYellow,
-            Error = ConsoleColor.DarkRed,
-            Warning = ConsoleColor.Yellow,
-        }
-
-        public static void FancyWriteLine(string beforeText, string fancyText, string afterText, TextColor fancyColor)
-        {
-            Console.ForegroundColor = (ConsoleColor)TextColor.Text;
-            Console.Write(beforeText);
-            Console.ForegroundColor = (ConsoleColor)fancyColor;
-            Console.Write(fancyText);
-            Console.ForegroundColor = (ConsoleColor)TextColor.Text;
-            Console.WriteLine(afterText);
-        }
-
-        public static void FancyWriteLine(string text, TextColor fancyColor)
-        {
-            Console.ForegroundColor = (ConsoleColor)fancyColor;
-            Console.WriteLine(text);
-            Console.ForegroundColor = (ConsoleColor)TextColor.Text;
-        }
-
-        public string? AskUser(string prompt)
-        {
-            Console.Write(prompt);
-            Console.ForegroundColor = (ConsoleColor)TextColor.Command;
-            string? readIn = Console.ReadLine();
-            Console.ForegroundColor = (ConsoleColor)TextColor.Text;
-            return readIn;
         }
     }
 }

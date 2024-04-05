@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Text;
-
 using TSD.API.Remoting;
 using TSD.API.Remoting.Document;
 using TSD.API.Remoting.Loading;
@@ -8,12 +7,17 @@ using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Common;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
+using Google.Protobuf.WellKnownTypes;
+using MathNet.Numerics.Providers.SparseSolver;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
 
 namespace TeklaResultsInterrogator.Core
 {
     public class ForceInterrogator : BaseInterrogator
     {
         protected AnalysisType AnalysisType = AnalysisType.FirstOrderLinear;
+
         protected List<MemberConstruction> RequestedMemberType = new List<MemberConstruction>();
         protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
         protected List<ILoadcase>? AllLoadcases { get; set; }
@@ -23,7 +27,6 @@ namespace TeklaResultsInterrogator.Core
         protected List<IEnvelope>? AllEnvelopes { get; set; }
         protected List<IEnvelope>? SolvedEnvelopes { get; set; }
         protected List<IMember>? AllMembers { get; set; }
-
         public ForceInterrogator() { }
 
         public override void Initialize()  // to get solver model and other stuff here
@@ -40,13 +43,17 @@ namespace TeklaResultsInterrogator.Core
                 Flag = true;
                 return;
             }
-            IEnumerable<TSD.API.Remoting.Solver.IModel> solverModels = Model.GetSolverModelsAsync(new[] { AnalysisType }).Result;
+            Console.WriteLine($"Using {AnalysisType}");
+            IEnumerable<TSD.API.Remoting.Solver.IModel> solverModels = await Model.GetSolverModelsAsync(new[] { AnalysisType });
             if (!solverModels.Any())
             {
                 FancyWriteLine("No solver models found!", TextColor.Error);
                 Flag = true;
                 return;
             }
+
+            FancyWriteLine($"{AnalysisType} solver model found.", TextColor.Text);
+
             TSD.API.Remoting.Solver.IModel? solverModel = solverModels.FirstOrDefault();
             if (solverModel == null)
             {
@@ -55,7 +62,7 @@ namespace TeklaResultsInterrogator.Core
                 return;
             }
             SolverModel = solverModel;
-
+    
             // Get Analysis Results
             Console.WriteLine("Searching for analysis results...");
             IAnalysisResults? solverResults = SolverModel.GetResultsAsync().Result;
@@ -198,23 +205,91 @@ namespace TeklaResultsInterrogator.Core
             {
                 string? readIn = AskUser("Choose an available loading condition: ");
                 if (readIn != null && loadingOptions.Keys.Contains(readIn))
-                {
+                {   
+                    
                     loadingCases = loadingOptions[readIn];
+                    FancyWriteLine("Available loading:", TextColor.Text);
+                    foreach (var load in loadingCases)
+                    {
+                        FancyWriteLine(load.Name, TextColor.Text);
+                    }
+                    readIn = AskUser("Input a number or hit Enter to get all: ");
+                    if (readIn != null && readIn!="") {
+                        loadingCases = loadingCases.Where(load => load.ReferenceIndex.Equals(Convert.ToInt32(readIn))).ToList(); // This is a bad way of doing this because I am not checking if the integer is valid, but it let's not let perfect be the enemy of the good!
+                    }
                 }
                 else
                 {
-                    FancyWriteLine("Loading Condition ", $"{readIn}", " not found.", TextColor.Command);
+                    FancyWriteLine("Loading Condition", $"{readIn}", " not found.", TextColor.Command);
                 }
             } while (loadingCases == null);
 
             return loadingCases;
         }
 
+        public bool? AskGravityOnly()
+        {
+            bool? GravityOnly = null;
+   
+                string? readIn = AskUser("Enter Y to query Gravity Only members, or N to query Lateral members, hit Enter to get All");
+            do
+            {
+                if (readIn == "Y")
+                {
+                    GravityOnly = true;
+                }
+                else if (readIn == "N")
+                {
+                    GravityOnly = false;
+                }
+                else if (readIn == "")
+                {
+                    return null;
+                }
+                else
+                {
+                    FancyWriteLine("Input ", $"{readIn}", " not recognized. All members will be returned", TextColor.Command);
+                }
+
+            } while (GravityOnly == null);
+            
+            return (bool?)GravityOnly;
+        }
+
+        public bool? AskAutoDesign()
+        {
+            bool? AutoDesign = null;
+
+            string? readIn = AskUser("Enter Y to query Autodesign members only, or N to query Non-Autodesign members, hit Enter to get All");
+            if (readIn == "Y")
+            {
+                AutoDesign = true;
+            }
+            else if (readIn == "N")
+            {
+                AutoDesign = false;
+            }
+            else if (readIn == "")
+            {
+                AutoDesign = null;
+            }
+            else
+            {
+                FancyWriteLine("Input ", $"{readIn}", " not recognized. All members will be returned", TextColor.Command);
+            }
+
+            return (bool?)AutoDesign;
+        }
+
+
         public int AskPoints(int maxPoints)
         {
             FancyWriteLine("Select the number of points along beam span at which forces and displacements will be calculated.", TextColor.Text);
             FancyWriteLine("Enter ", "1", " to return maxima only.", TextColor.Command);
-            FancyWriteLine("Enter ", "2", $" or greater (max. {maxPoints}) to subdivide spans.", TextColor.Command);
+            if (maxPoints >= 2) 
+            {
+                FancyWriteLine("Enter ", "2", $" or greater (max. {maxPoints}) to subdivide spans.", TextColor.Command);
+            }
             FancyWriteLine("Enter ", "0", " to ignore force and displacement data.", TextColor.Command);
 
             int numPoints = -1;

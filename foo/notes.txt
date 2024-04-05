@@ -1,0 +1,19 @@
+﻿ABOUT THE TeklaResultsInterrogator APPLICATION
+
+Program wraps an instantiation of the Menu class.
+Initialization of Menu runs a script which will query the \Commands directory and grab all filenames and convert them to MenuOption objects (and Help and Quit).
+The MenuOption object Names will then be displayed in the console, awaiting user input.
+If the user input matches the name of a valid MenuOption, the InvokeCommand method will be invoked which instantiates an instance of the corresponding class from the Commands namespaceusing a parameterless constructor.
+If this is successful, the Menu.Command property will expose this class to the Program.Main routine where it will be asynchronously initialized.
+
+The BaseInterrogator class is the base class of all commands.
+Commands that deal with member forces inherit properties from ForceInterrogator, which is derived from BaseInterrogator.
+Commands that dela with nodal vibrations inherit properties from VibrationInterrogator, which is derived from BaseInterrogator.
+
+Command names: green
+Titles: dark cyan
+Paths: yellow
+
+Need some way to tell in each child class if in itialization of parent was successful (i.e., no null properties). If all properties are non-null, then the routine should continue. If any property is null, then the routine should exit with error.
+
+What to do if multiple tekla files in the same folder?

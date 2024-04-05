@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using TeklaResultsInterrogator.Core;
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
@@ -12,6 +11,11 @@ using TSD.API.Remoting.Structure;
 using MathNet.Numerics;
 using MathNet.Numerics.Integration;
 using Google.Protobuf.WellKnownTypes;
+
+using TeklaResultsInterrogator.Core;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
+
 
 namespace TeklaResultsInterrogator.Core
 {
@@ -201,31 +205,7 @@ namespace TeklaResultsInterrogator.Core
             return new MaxSpanInfoData(maxValue, maxPosition, minValue, minPosition);
         }
 
-        private static double ConversionFactor(LoadingValueType loadingValueType)
-        {
-            double valCon = 1;
-            switch (loadingValueType)
-            {
-                case LoadingValueType.Force:
-                    valCon = 0.0002248089; // Converting from [N] to [k]
-                    break;
-                case LoadingValueType.Moment:
-                    valCon = 0.000000737562121169657; // Converting from [N-mm] to [k-ft]
-                    break;
-                case LoadingValueType.Displacement:
-                    valCon = 0.0393701; // Converting from [mm] to [in]
-                    break;
-                case LoadingValueType.Deflection:
-                    valCon = 0.0393701; // Converting from [mm] to [in]
-                    break;
-                default:
-                    BaseInterrogator.FancyWriteLine("Warning: units not converted from base units. Refer to Tekla Structural Designer API documentation for default units.", BaseInterrogator.TextColor.Warning);
-                    break;
-            }
-            return valCon;
-        }
-
-        public List<PointSpanInfo> GetStations()
+        public async Task<List<PointSpanInfo>> GetStations()
         {
             // Calculate station positions
             IEnumerable<double> positions = Generate.LinearSpaced(Subdivisions, 0, Length);
@@ -276,155 +256,6 @@ namespace TeklaResultsInterrogator.Core
             }
 
             return value;
-        }
-    }
-
-    public class MaxSpanInfo
-    {
-        public MaxSpanInfoData ShearMajor { get; set; }
-        public MaxSpanInfoData ShearMinor { get; set; }
-        public MaxSpanInfoData MomentMajor { get; set; }
-        public MaxSpanInfoData MomentMinor { get; set; }
-        public MaxSpanInfoData AxialForce { get; set; }
-        public MaxSpanInfoData Torsion { get; set; }
-        public MaxSpanInfoData DeflectionMajor { get; set; }
-        public MaxSpanInfoData DeflectionMinor { get; set; }
-        public MaxSpanInfoData DisplacementMajor { get; set; }
-        public MaxSpanInfoData DisplacementMinor { get; set; }
-
-        public MaxSpanInfo(MaxSpanInfoData shearMajor, MaxSpanInfoData shearMinor, MaxSpanInfoData momentMajor, MaxSpanInfoData momentMinor, MaxSpanInfoData axialForce, MaxSpanInfoData torsion, MaxSpanInfoData deflectionMajor, MaxSpanInfoData deflectionMinor, MaxSpanInfoData displacementMajor, MaxSpanInfoData displacementMinor)
-        {
-            ShearMajor = shearMajor;
-            ShearMinor = shearMinor;
-            MomentMajor = momentMajor;
-            MomentMinor = momentMinor;
-            AxialForce = axialForce;
-            Torsion = torsion;
-            DeflectionMajor = deflectionMajor;
-            DeflectionMinor = deflectionMinor;
-            DisplacementMajor = displacementMajor;
-            DisplacementMinor = displacementMinor;
-        }
-
-        public MaxSpanInfo()
-        {
-            ShearMajor = new MaxSpanInfoData();
-            ShearMinor = new MaxSpanInfoData();
-            MomentMajor = new MaxSpanInfoData();
-            MomentMinor = new MaxSpanInfoData();
-            AxialForce = new MaxSpanInfoData();
-            Torsion = new MaxSpanInfoData();
-            DeflectionMajor = new MaxSpanInfoData();
-            DeflectionMinor = new MaxSpanInfoData();
-            DisplacementMajor = new MaxSpanInfoData();
-            DisplacementMinor = new MaxSpanInfoData();
-        }
-
-        public void EnvelopeAndUpdate(MaxSpanInfo other)
-        {
-            ShearMajor.CompareAndUpdate(other.ShearMajor);
-            ShearMinor.CompareAndUpdate(other.ShearMinor);
-            MomentMajor.CompareAndUpdate(other.MomentMajor);
-            MomentMinor.CompareAndUpdate(other.MomentMinor);
-            AxialForce.CompareAndUpdate(other.AxialForce);
-            Torsion.CompareAndUpdate(other.Torsion);
-            DeflectionMajor.CompareAndUpdate(other.DeflectionMajor);
-            DeflectionMinor.CompareAndUpdate(other.DeflectionMinor);
-            DisplacementMajor.CompareAndUpdate(other.DisplacementMajor);
-            DisplacementMinor.CompareAndUpdate(other.DisplacementMinor);
-        }
-    }
-
-    public class MaxSpanInfoData
-    {
-        public double Position { get; set; }
-        public double Value { get; set; }
-        public double MaxPosition { get; set; }
-        public double MaxValue { get; set; }
-        public double MinPosition { get; set; }
-        public double MinValue { get; set; }
-
-        public MaxSpanInfoData(double maxValue, double maxPosition, double minValue, double minPosition)
-        {
-            MaxValue = maxValue;
-            MaxPosition = maxPosition;
-            MinValue = minValue;
-            MinPosition = minPosition;
-            if (Math.Abs(minValue) > Math.Abs(maxValue))
-            {
-                Value = minValue;
-                Position = minPosition;
-            }
-            else
-            {
-                Value = maxValue;
-                Position = maxPosition;
-            }
-        }
-
-        public MaxSpanInfoData()
-        {
-            Position = 0;
-            Value = 0;
-            MaxPosition = 0;
-            MaxValue = 0;
-            MinPosition = 0;
-            MinValue = 0;
-        }
-
-        public void CompareAndUpdate(MaxSpanInfoData other)
-        {
-            // TODO: if enveloping multiple spans (such as a multi-stack column lift) the position will need to be offset
-            if (other.MaxValue > MaxValue)
-            {
-                MaxValue = other.MaxValue;
-                MaxPosition = other.MaxPosition;
-            }
-            if (other.MinValue < MinValue)
-            {
-                MinValue = other.MinValue;
-                MinPosition = other.MinPosition;
-            }
-            if (Math.Abs(MinValue) > Math.Abs(MaxValue))
-            {
-                Value = MinValue;
-                Position = MinPosition;
-            }
-            else
-            {
-                Value = MaxValue;
-                Position = MaxPosition;
-            }
-        }
-    }
-
-    public class PointSpanInfo
-    {
-        public double Position { get; set; }
-        public double ShearMajor { get; set; }
-        public double ShearMinor { get; set; }
-        public double MomentMajor { get; set; }
-        public double MomentMinor { get; set; }
-        public double AxialForce { get; set; }
-        public double Torsion { get; set; }
-        public double DeflectionMajor { get; set; }
-        public double DeflectionMinor { get; set; }
-        public double DisplacementMajor { get; set; }
-        public double DisplacementMinor { get; set; }
-
-        public PointSpanInfo(double position, double shearMajor, double shearMinor, double momentMajor, double momentMinor, double axialForce, double torsion, double deflectionMajor, double deflectionMinor, double displacementMajor, double displacementMinor)
-        {
-            Position = position;
-            ShearMajor = shearMajor;
-            ShearMinor = shearMinor;
-            MomentMajor = momentMajor;
-            MomentMinor = momentMinor;
-            AxialForce = axialForce;
-            Torsion = torsion;
-            DeflectionMajor = deflectionMajor;
-            DeflectionMinor = deflectionMinor;
-            DisplacementMajor = displacementMajor;
-            DisplacementMinor = displacementMinor;
         }
     }
 }

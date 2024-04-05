@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
 
 using TSD.API.Remoting;
 using TSD.API.Remoting.Document;
@@ -13,7 +15,7 @@ namespace TeklaResultsInterrogator.Core
     public class VibrationInterrogator : BaseInterrogator
     {
         private AnalysisType AnalysisType = AnalysisType.FirstOrderVibration;
-        protected TSD.API.Remoting.Solver.IModel? SolverModel {  get; set; }
+        protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
         protected IEnumerable<INode>? Nodes { get; set; }
         protected ILoadingVibration? LoadingVibration { get; set; }
 
