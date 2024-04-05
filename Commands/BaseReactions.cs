@@ -14,51 +14,22 @@ using System.Formats.Asn1;
 using System.ComponentModel;
 using Microsoft.VisualBasic;
 using System.Runtime.Versioning;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
 
 namespace TeklaResultsInterrogator.Commands
 {
 
 
-public class basereactions : ForceInterrogator  // Should inherit a parent Interrogator class
+public class BaseReactions : ForceInterrogator  // Should inherit a parent Interrogator class
     {
         // Should not declare any public properties here
 
         // Leave class constructor parameterless
-        public basereactions()
+        public BaseReactions()
         {
             HasOutput = true;  // Only explicitly declare properties in constructor body
 
-        }
-
-        public void WriteToCsv(List<string> headers, List<object[]> data, string filePath)
-        { 
-            
-                using (var writer = new StreamWriter(filePath))
-                {
-                    // Write headers
-                    writer.WriteLine(string.Join(",", headers));
-
-                    // Write data rows
-                    foreach (var row in data)
-                    {
-                        writer.WriteLine(string.Join(",", row));
-                    }
-                }
-        }
-
-        public double ToK(double newton) 
-        {
-            return newton * 0.0002248089;
-        }
-
-        public double ToKFt(double newtonmillimeters)
-        {
-            return newtonmillimeters * 0.000000737562121169657;
-        }
-
-        public double ToFt(double millimeters)
-        {
-            return millimeters*0.00328084;
         }
 
         // Main routines here to be called after initialization
@@ -90,7 +61,10 @@ public class basereactions : ForceInterrogator  // Should inherit a parent Inter
                     {
                         IForce3DGlobal reaction = await support.GetSupportReactionAsync(loadcase.Id, false);
                         IConstructionPoint my_point = constructionPoints.Where(pt => pt.SolverNodeIndex.Value.Equals(support.Index)).First();
-                        object[] support_reactions = { support.Index, my_point.Name, ToFt(support.Coordinates.X),ToFt(support.Coordinates.Y),ToFt(support.Coordinates.Z),loadcase.Name, ToK(reaction.Fx), ToK(reaction.Fy), ToK(reaction.Fz), ToKFt(reaction.Mx), ToKFt(reaction.My), ToKFt(reaction.Mz) };
+                        object[] support_reactions = { support.Index, my_point.Name,
+                                                       mm2ft(support.Coordinates.X), mm2ft(support.Coordinates.Y), mm2ft(support.Coordinates.Z),
+                                                       loadcase.Name, ToK(reaction.Fx), ToK(reaction.Fy), ToK(reaction.Fz),
+                                                       ToKFt(reaction.Mx), ToKFt(reaction.My), ToKFt(reaction.Mz) };
                         reactions.Add(support_reactions);
                     }
                 }

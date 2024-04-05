@@ -9,6 +9,8 @@ using TSD.API.Remoting.Common;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
 using Google.Protobuf.WellKnownTypes;
 using MathNet.Numerics.Providers.SparseSolver;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.Utils;
 
 namespace TeklaResultsInterrogator.Core
 {
