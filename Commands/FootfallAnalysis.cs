@@ -15,15 +15,15 @@ namespace TeklaResultsInterrogator.Commands
             HasOutput = true;
         }
 
-        public override Task Execute()
+        public override async Task ExecuteAsync()
         {
             // Initialize parents
-            Initialize();
+            await InitializeAsync();
 
             // Check for null properties
             if (Flag)
             {
-                return Task.CompletedTask;
+                return;
             }
 
             // Data setup and diagnostics
@@ -169,7 +169,7 @@ namespace TeklaResultsInterrogator.Commands
             stopwatch.Stop();
             ExecutionTime = stopwatch.Elapsed.TotalSeconds;
 
-            return Task.CompletedTask;
+            return;
         }
     }
 }
