@@ -25,15 +25,15 @@ namespace TeklaResultsInterrogator.Commands
             RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.TimberColumn };
         }
 
-        public override async Task ExecuteAsync()
+        public override Task Execute()
         {
             // Initialize parents
-            await InitializeAsync();
+            Initialize();
 
             // Check for null properties
             if (Flag)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             // Data setup and diagnostics initialization
@@ -61,7 +61,7 @@ namespace TeklaResultsInterrogator.Commands
             Console.WriteLine($"{AllMembers.Count} structural members found in model.");
             Console.WriteLine($"{timberColumns.Count} timber columns found.");
 
-            List<IHorizontalConstructionPlane> levels = (await Model.GetLevelsAsync()).ToList();
+            List<IHorizontalConstructionPlane> levels = (Model.GetLevelsAsync().Result).ToList();
 
             double timeUnpack = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
             Console.WriteLine($"Loading and member data unpacked in {timeUnpack} seconds.\n");
@@ -73,7 +73,7 @@ namespace TeklaResultsInterrogator.Commands
             foreach (IMember column in timberColumns)
             {
                 ColumnLifts lifts = new ColumnLifts(column);
-                await lifts.OrganizeByFixity();
+                lifts.OrganizeByFixity();
                 timberColumnLifts.Add(lifts);
             }
             double endStack = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
@@ -105,12 +105,12 @@ namespace TeklaResultsInterrogator.Commands
                     foreach (NamedList<IMemberSpan> lift in lifts)
                     {
                         int startNodeIdx = lift.Values.First().StartMemberNode.ConstructionPointIndex.Value;
-                        IEnumerable<IConstructionPoint> startConstructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { startNodeIdx });
+                        IEnumerable<IConstructionPoint> startConstructionPoints = Model.GetConstructionPointsAsync(new List<int>() { startNodeIdx }).Result;
                         IEnumerable<int> startPlaneIds = startConstructionPoints.Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane).Select(p => p.PlaneInfo.Value.Index);
                         string startLevelName;
                         if (startPlaneIds.Any())
                         {
-                            IHorizontalConstructionPlane startLevel = (await Model.GetLevelsAsync(startPlaneIds)).First();
+                            IHorizontalConstructionPlane startLevel = ( Model.GetLevelsAsync(startPlaneIds).Result).First();
                             startLevelName = startLevel.Name;
                         }
                         else
@@ -121,12 +121,12 @@ namespace TeklaResultsInterrogator.Commands
                         }
 
                         int endNodeIdx = lift.Values.Last().EndMemberNode.ConstructionPointIndex.Value;
-                        IEnumerable<IConstructionPoint> endConstructionPoints = await Model.GetConstructionPointsAsync(new List<int> { endNodeIdx });
+                        IEnumerable<IConstructionPoint> endConstructionPoints = Model.GetConstructionPointsAsync(new List<int> { endNodeIdx }).Result;
                         IEnumerable<int> endPlaneIds = endConstructionPoints.Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane).Select(p => p.PlaneInfo.Value.Index);
                         string endLevelName;
                         if (endPlaneIds.Any())
                         {
-                            IHorizontalConstructionPlane endLevel = (await Model.GetLevelsAsync(endPlaneIds)).First();
+                            IHorizontalConstructionPlane endLevel = (Model.GetLevelsAsync(endPlaneIds).Result).First();
                             endLevelName = endLevel.Name;
                         }
                         else
@@ -158,7 +158,7 @@ namespace TeklaResultsInterrogator.Commands
                             foreach (IMemberSpan span in lift.Values)
                             {
                                 SpanResults spanResults = new SpanResults(span, 1, loadingCase, reduced, AnalysisType, member);
-                                MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
+                                MaxSpanInfo maxSpanInfo = spanResults.GetMaxima();
                                 maxLiftInfo.EnvelopeAndUpdate(maxSpanInfo);
                             }
 
@@ -189,7 +189,7 @@ namespace TeklaResultsInterrogator.Commands
 
             Check();
 
-            return;
+            return Task.CompletedTask;
         }
     }
 }

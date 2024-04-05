@@ -14,13 +14,13 @@ namespace TeklaResultsInterrogator.Commands
 
         }
 
-        public override async Task ExecuteAsync()
+        public override Task Execute()
         {
-            await InitializeAsync();
+            Initialize();
 
             Check();
 
-            return;
+            return Task.CompletedTask;
 
         }
     }
