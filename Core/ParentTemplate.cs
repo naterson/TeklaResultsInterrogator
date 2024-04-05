@@ -15,12 +15,12 @@ namespace TeklaResultsInterrogator.Core
         public ParentTemplate() { }
 
         // Treat this as the parameterless constructor
-        public override void Initialize()
+        public override async Task InitializeAsync()
         {
             // Initialize base class
             Stopwatch stopwatch = Stopwatch.StartNew();
-            InitializeBase();
-            
+            await InitializeBaseAsync();
+
             // Populate class properties here
 
             // Complete Initialization

@@ -25,15 +25,15 @@ namespace TeklaResultsInterrogator.Commands
             RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.TimberBeam };
         }
 
-        public override Task Execute()
+        public override async Task ExecuteAsync()
         {
             // Initialize parents
-            Initialize();
+            await InitializeAsync();
 
             // Check for null properties
             if (Flag)
             {
-                return Task.CompletedTask;
+                return;
             }
 
             // Data setup and diagnostics initialization
@@ -87,12 +87,12 @@ namespace TeklaResultsInterrogator.Commands
                 {
                     string name = member.Name;
                     Guid id = member.Id;
-                    IEnumerable<IMemberSpan> spans = member.GetSpanAsync().Result;
+                    IEnumerable<IMemberSpan> spans = await member.GetSpanAsync();
 
                     int constructionPointIndex = member.MemberNodes.Value.First().Value.ConstructionPointIndex.Value;
-                    IEnumerable<IConstructionPoint> constructionPoints = Model.GetConstructionPointsAsync(new List<int>() { constructionPointIndex }).Result;
+                    IEnumerable<IConstructionPoint> constructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { constructionPointIndex });
                     int planeId = constructionPoints.First().PlaneInfo.Value.Index;
-                    IEnumerable<IHorizontalConstructionPlane> level = Model.GetLevelsAsync(new List<int>() { planeId }).Result;
+                    IEnumerable<IHorizontalConstructionPlane> level = await Model.GetLevelsAsync(new List<int>() { planeId });
                     string levelName;
                     if (level.Any())
                     {
@@ -143,7 +143,7 @@ namespace TeklaResultsInterrogator.Commands
                             SpanResults spanResults = new SpanResults(span, 1, loadingCase, reduced, AnalysisType, member);
 
                             // Getting maximum internal forces and displacements and locations
-                            MaxSpanInfo maxSpanInfo = spanResults.GetMaxima();
+                            MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
                             string maxLine = spanLineOnly + "," + String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8}",
                                 loadName,
                                 maxSpanInfo.ShearMajor.Value,
@@ -173,7 +173,7 @@ namespace TeklaResultsInterrogator.Commands
 
             Check();
 
-            return Task.CompletedTask;
+            return;
         }
     }
 }

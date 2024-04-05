@@ -27,20 +27,20 @@ namespace TeklaResultsInterrogator
 {
     internal class Program
     {
-        public static Task Main()
+        public static async Task Main()
         {
             // Initialize Menu and get Command property on completion of Menu constructor
             Menu menu = new Menu();
             var command = menu.Command;
             if (command != null )
             {
-               command.Execute();  // Execute command
+               await command.ExecuteAsync();  // Execute command
             }
             else
             {
                 Console.WriteLine("Aborted.");
                 HaltExit(true);
-                return Task.CompletedTask;
+                return;
             }
             command.Check();
             // If command executed successfully, wrap it up and exit
@@ -51,21 +51,21 @@ namespace TeklaResultsInterrogator
                 FancyWriteLine("Command ", command.Name, $" executed successfully in {time} seconds.\nThe application will now terminate.", TextColor.Command);
                 command.MakeHeader(true);
                 HaltExit(true);
-                return Task.CompletedTask;
+                return;
             }
             else
             {
                 FancyWriteLine($"{command.Name} failed to execute completely. Task aborted.", TextColor.Error);
                 HaltExit(false);
-                return Task.CompletedTask;
+                return;
             }
             
         }
         private static void HaltExit(bool success)
         {
             string name = Process.GetCurrentProcess().ProcessName;
-            string? path = Environment.ProcessPath;
-            int process = Environment.ProcessId;
+            string path = Environment.ProcessPath;
+            int process = Process.GetCurrentProcess().Id;
             string status = (success == true) ? "successfully" : "unsuccessfully";
             Console.WriteLine($"\n{name} at {path} (process {process}) executed {status}.");
             Console.WriteLine("The application will now terminate.\nPress any key to close this window . . .");

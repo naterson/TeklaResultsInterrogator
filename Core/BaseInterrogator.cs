@@ -29,13 +29,13 @@ namespace TeklaResultsInterrogator.Core
             HasOutput = false;
         }
 
-        public void InitializeBase()
+        public async Task InitializeBaseAsync()
         {
             MakeHeader();
             FancyWriteLine("Initialization:", TextColor.Title);
 
             // Get BaseInterrogator Properties
-            Application = ApplicationFactory.GetFirstRunningApplicationAsync().Result;
+            Application = await ApplicationFactory.GetFirstRunningApplicationAsync();
             if (Application == null)
             {
                 FancyWriteLine("No running instances of TSD found!", TextColor.Error);
@@ -43,11 +43,11 @@ namespace TeklaResultsInterrogator.Core
                 return;
             }
 
-            string version = Application.GetVersionStringAsync().Result;
-            string title = Application.GetApplicationTitleAsync().Result;
+            string version = await Application.GetVersionStringAsync();
+            string title = await Application.GetApplicationTitleAsync();
             title = title.Split(" (")[0];
 
-            Document = Application.GetDocumentAsync().Result;
+            Document = await Application.GetDocumentAsync();
             if (Document == null)
             {
                 FancyWriteLine("No active Document found!", TextColor.Error);
@@ -68,7 +68,7 @@ namespace TeklaResultsInterrogator.Core
             FileName = FileName.Replace(" ", "");
             DocumentDirectory = Document.Path[..DocumentPath.LastIndexOf('\\')];
 
-            Model = Document.GetModelAsync().Result;
+            Model = await Document.GetModelAsync();
             if (Model == null)
             {
                 FancyWriteLine("No Model found within Document!", TextColor.Error);
@@ -92,15 +92,16 @@ namespace TeklaResultsInterrogator.Core
             }
         }
 
-        public virtual void Initialize()  // For mid-level interrogator classes to override
+        public virtual async Task InitializeAsync()  // For mid-level interrogator classes to override
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            InitializeBase();
+            await InitializeBaseAsync();
             stopwatch.Stop();
             InitializationTime = stopwatch.Elapsed.TotalSeconds;
+            return;
         }
 
-        public virtual Task Execute()  // For command classes to override
+        public virtual Task ExecuteAsync()  // For command classes to override
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
             stopwatch.Stop();
