@@ -3,29 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using MathNet.Numerics;
+using TeklaResultsInterrogator.Core;
+using TeklaResultsInterrogator.Utils;
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
-
-using MathNet.Numerics;
-
-using TeklaResultsInterrogator.Core;
-using TeklaResultsInterrogator.Utils;
-using static TeklaResultsInterrogator.Utils.Utils;
+using static TeklaResultsInterrogator.Utils.ConsoleUtils;
 
 
 namespace TeklaResultsInterrogator.Core
 {
+    /// <summary>
+    /// Encapsulates results for a single member span, handling maxima and station-based data retrieval.
+    /// </summary>
     public class SpanResults
     {
+        /// <summary>Name of the span.</summary>
         public string Name { get; set; }
+        /// <summary>Length of the span (mm).</summary>
         public double Length { get; set; }
+        /// <summary>Whether to use reduced results.</summary>
         public bool Reduced { get; set; }
+        /// <summary>Number of subdivisions/stations for detailed analysis.</summary>
         public int Subdivisions { get; set; }
+        /// <summary>Associated loading case.</summary>
         public ILoadingCase Loading { get; set; }
+        /// <summary>Associated analysis type.</summary>
         public AnalysisType AnalysisType { get; set; }
+        /// <summary>The TSD span object.</summary>
         public IMemberSpan Span { get; set; }
+        /// <summary>The parent member of the span.</summary>
         public IMember ParentMember { get; set; }
 
         private LoadingValueOptions ShearMajorValueOption { get; set; }
@@ -39,6 +47,15 @@ namespace TeklaResultsInterrogator.Core
         private LoadingValueOptions DisplacementMajorValueOption { get; set; }
         private LoadingValueOptions DisplacementMinorValueOption { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SpanResults"/> class.
+        /// </summary>
+        /// <param name="span">The member span.</param>
+        /// <param name="subdivisions">Number of subdivisions.</param>
+        /// <param name="loading">Loading case.</param>
+        /// <param name="reduced">Use reduced forces.</param>
+        /// <param name="analysisType">Analysis type.</param>
+        /// <param name="parentMember">Parent member.</param>
         public SpanResults(IMemberSpan span, int subdivisions, ILoadingCase loading, bool reduced, AnalysisType analysisType, IMember parentMember)
         {
             Span = span;
@@ -62,6 +79,10 @@ namespace TeklaResultsInterrogator.Core
             DisplacementMinorValueOption = LoadingValueOptions.StaticValue(LoadingValueType.Displacement, LoadingDirection.Minor, Reduced);
         }
 
+        /// <summary>
+        /// Calculates and retrieves the maximum values for forces and displacements along the span.
+        /// </summary>
+        /// <returns>A <see cref="MaxSpanInfo"/> object containing the maxima.</returns>
         public async Task<MaxSpanInfo> GetMaxima()
         {
             // Get Loading
@@ -85,43 +106,47 @@ namespace TeklaResultsInterrogator.Core
 
         private async Task<MaxSpanInfoData> CalculateMaximum(IMemberLoading loading, LoadingValueOptions option)
         {
-            // Get Points of Interest
-            List<IPointOfInterest> points = new List<IPointOfInterest>();
+            // Get Places of Interest
+            List<IPointOfInterest> points = new();
             points.AddRange((await loading.GetPointsOfInterest(option, PointOfInterestType.Maximum)).ToList());
             points.AddRange((await loading.GetPointsOfInterest(option, PointOfInterestType.Minimum)).ToList());
             points = points.Where(p => p.SpanIndex == Span.Index).ToList();
 
             // Get Positions
-            List<ValueTuple<int, double>> positions = new List<ValueTuple<int, double>>();
+            List<(int, double)> positions = new();
             foreach (IPointOfInterest point in points)
             {
-                ValueTuple<int, double> position = new ValueTuple<int, double>(Span.Index, point.Position);
-                positions.Add(position);
+                positions.Add((Span.Index, point.Position));
             }
 
             // Get Values in base units
             IEnumerable<ILoadingValue> values = await loading.GetValueAsync(option, positions);
-            values = values.OrderByDescending(lv => lv.Value);
             double maxValue = 0;
             double maxPosition = 0;
             double minValue = 0;
             double minPosition = 0;
 
-            // Convert units
-            double posCon = 0.00328084; // Converting from [mm] to [ft]
+            // Convert units conversion factor
             double valCon = ConversionFactor(option.Type);
 
             if (values.Any())
             {
-                maxValue = values.First().Value * valCon;
-                maxPosition = values.First().Position * posCon;
-                minValue = values.Last().Value * valCon;
-                minPosition = values.Last().Position * posCon;
+                var max = values.MaxBy(lv => lv.Value)!;
+                maxValue = max.Value * valCon;
+                maxPosition = MmToFt(max.Position);
+
+                var min = values.MinBy(lv => lv.Value)!;
+                minValue = min.Value * valCon;
+                minPosition = MmToFt(min.Position);
             }
-            
+
             return new MaxSpanInfoData(maxValue, maxPosition, minValue, minPosition);
         }
 
+        /// <summary>
+        /// Calculates force and displacement values at specified stations along the span.
+        /// </summary>
+        /// <returns>A list of <see cref="PointSpanInfo"/> containing data for each station.</returns>
         public async Task<List<PointSpanInfo>> GetStations()
         {
             // Calculate station positions
@@ -131,9 +156,9 @@ namespace TeklaResultsInterrogator.Core
             IMemberLoading memberLoading = await ParentMember.GetLoadingAsync(Loading.Id, AnalysisType, LoadingResultType.Base);
 
             //Instantiate output list
-            List<PointSpanInfo> stationData = new List<PointSpanInfo>();
+            List<PointSpanInfo> stationData = new();
 
-            foreach(double position in positions)
+            foreach (double position in positions)
             {
 
                 // Calculate values
@@ -148,8 +173,8 @@ namespace TeklaResultsInterrogator.Core
                 double displacementMajor = await GetLoadingValues(memberLoading, DisplacementMajorValueOption, position);
                 double displacementMinor = await GetLoadingValues(memberLoading, DisplacementMinorValueOption, position);
 
-                double positionFt = position * 0.00328084; // Converting from [mm] to [ft]
-                PointSpanInfo stationInfo = new PointSpanInfo(Loading, positionFt, shearMajor, shearMinor, momentMajor, momentMinor, axialForce, torsion, deflectionMajor, deflectionMinor, displacementMajor, displacementMinor);
+                double positionFt = MmToFt(position); // Converting from [mm] to [ft]
+                PointSpanInfo stationInfo = new(Loading, positionFt, shearMajor, shearMinor, momentMajor, momentMinor, axialForce, torsion, deflectionMajor, deflectionMinor, displacementMajor, displacementMinor);
 
                 stationData.Add(stationInfo);
             }
@@ -161,15 +186,13 @@ namespace TeklaResultsInterrogator.Core
         {
             // Get Loading
             IEnumerable<ILoadingValue> values = await loading.GetValueAsync(option, Span.Index, position);
-            values = values.OrderByDescending(lv => lv.Value);
-
             // Convert units
             double valCon = ConversionFactor(option.Type);
 
             double value = 0;
             if (values.Any())
             {
-                value = values.First().Value * valCon;
+                value = values.MaxBy(lv => lv.Value)!.Value * valCon;
             }
 
             return value;

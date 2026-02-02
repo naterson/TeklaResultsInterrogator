@@ -1,26 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Data.Common;
+using System.Diagnostics;
 using System.IO;
-
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using TeklaResultsInterrogator.Commands;
+using TeklaResultsInterrogator.Core;
+using TeklaResultsInterrogator.Utils;
 using TSD.API.Remoting;
-using TSD.API.Remoting.Solver;
-using TSD.API.Remoting.Structure;
+using TSD.API.Remoting.Common;
 using TSD.API.Remoting.Document;
-using TSD.Rpc.Analysis;
-using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Sections;
-using TSD.API.Remoting.Common;
-using System.Data.Common;
-
-using TeklaResultsInterrogator.Core;
-using TeklaResultsInterrogator.Commands;
-using System.Reflection;
-using System.Diagnostics;
-using TeklaResultsInterrogator.Utils;
-using static TeklaResultsInterrogator.Utils.Utils;
+using TSD.API.Remoting.Solver;
+using TSD.API.Remoting.Structure;
+using TSD.Rpc.Analysis;
+using static TeklaResultsInterrogator.Utils.ConsoleUtils;
+using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
 
 
 namespace TeklaResultsInterrogator
@@ -32,9 +30,9 @@ namespace TeklaResultsInterrogator
             // Initialize Menu and get Command property on completion of Menu constructor
             Menu menu = new Menu();
             var command = menu.Command;
-            if (command != null )
+            if (command != null)
             {
-               await command.ExecuteAsync();  // Execute command
+                await command.ExecuteAsync();  // Execute command
             }
             else
             {
@@ -59,7 +57,7 @@ namespace TeklaResultsInterrogator
                 HaltExit(false);
                 return;
             }
-            
+
         }
         private static void HaltExit(bool success)
         {

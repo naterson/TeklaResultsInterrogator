@@ -1,38 +1,61 @@
-﻿using TSD.API.Remoting;
-using TSD.API.Remoting.Document;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
-using TSD.API.Remoting.Common.Properties;
 using TeklaResultsInterrogator.Utils;
-using static TeklaResultsInterrogator.Utils.Utils;
+using TSD.API.Remoting;
+using TSD.API.Remoting.Common.Properties;
+using TSD.API.Remoting.Document;
+using static TeklaResultsInterrogator.Utils.ConsoleUtils;
 
 
 
 namespace TeklaResultsInterrogator.Core
 {
+    /// <summary>
+    /// Base class for all result interrogators, handling application connection, document retrieval, and common initialization logic.
+    /// </summary>
     public class BaseInterrogator
     {
+        /// <summary>The name of the interrogator or command.</summary>
         public string Name { get; set; }
+        /// <summary>The active TSD application instance.</summary>
         protected IApplication? Application { get; set; }
+        /// <summary>The active TSD document.</summary>
         protected IDocument? Document { get; set; }
+        /// <summary>The file path of the current document.</summary>
         public string? DocumentPath { get; set; }
+        /// <summary>The file name of the current document (without extension).</summary>
         public string? FileName { get; set; }
+        /// <summary>The constructed file name for output CSVs.</summary>
         public string? OutputFileName { get; set; }
+        /// <summary>The directory containing the current document.</summary>
         public string? DocumentDirectory { get; set; }
+        /// <summary>The directory where results will be saved.</summary>
         public string? SaveDirectory { get; set; }
+        /// <summary>The TSD Model interface.</summary>
         protected TSD.API.Remoting.Structure.IModel? Model { get; set; }
+        /// <summary>Time taken for initialization (seconds).</summary>
         public double InitializationTime { get; set; }
+        /// <summary>Time taken for command execution (seconds).</summary>
         public double ExecutionTime { get; set; }
+        /// <summary>Flag indicating if a critical error or stop condition occured.</summary>
         public bool Flag { get; set; }
+        /// <summary>Indicates if this command produces an output file.</summary>
         public bool HasOutput { get; set; }
+        /// <summary>Determines if this command should be listed in the main menu.</summary>
         public virtual bool ShowInMenu() { return false; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BaseInterrogator"/> class.
+        /// </summary>
         public BaseInterrogator()
         {
             Name = this.GetType().Name;
             HasOutput = false;
         }
 
+        /// <summary>
+        /// Performs the core initialization tasks: connecting to TSD, retrieving the document and model, and setting up file paths.
+        /// </summary>
         public async Task InitializeBaseAsync()
         {
             MakeHeader();
@@ -71,7 +94,7 @@ namespace TeklaResultsInterrogator.Core
             FileName = FileName[..FileName.LastIndexOf(".tsmd")];
             FileName = FileName.Replace(" ", "");
             OutputFileName = DateTime.Now.ToString("yyyyMMdd-HHmmss") + "_" + FileName;
-           
+
 
             DocumentDirectory = Document.Path[..DocumentPath.LastIndexOf('\\')];
 
@@ -99,7 +122,10 @@ namespace TeklaResultsInterrogator.Core
             }
         }
 
-        public virtual async Task InitializeAsync()  // For mid-level interrogator classes to override
+        /// <summary>
+        /// Wrapper method for initialization that measures time. Can be overridden using `override` keyword.
+        /// </summary>
+        public virtual async Task InitializeAsync()
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
             await InitializeBaseAsync();
@@ -108,7 +134,10 @@ namespace TeklaResultsInterrogator.Core
             return;
         }
 
-        public virtual Task ExecuteAsync()  // For command classes to override
+        /// <summary>
+        /// The main execution logic of the command. Must be overridden by derived classes.
+        /// </summary>
+        public virtual Task ExecuteAsync()
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
             stopwatch.Stop();
@@ -116,7 +145,10 @@ namespace TeklaResultsInterrogator.Core
             return Task.CompletedTask;
         }
 
-        public void Check()  // Check for null class properties
+        /// <summary>
+        /// Checks that all properties in the class are not null. Sets <see cref="Flag"/> to true if any are null.
+        /// </summary>
+        public void Check()
         {
             foreach (var prop in this.GetType().GetProperties(BindingFlags.NonPublic | BindingFlags.Instance))
             {
@@ -132,6 +164,10 @@ namespace TeklaResultsInterrogator.Core
             return;
         }
 
+        /// <summary>
+        /// Prints a formatted header to the console.
+        /// </summary>
+        /// <param name="footerOnly">If true, prints only the footer line; otherwise prints the full header.</param>
         public void MakeHeader(bool footerOnly = false)
         {
             string title = $"TeklaResultsInterrogator - {Name}";
@@ -139,7 +175,7 @@ namespace TeklaResultsInterrogator.Core
             Console.ForegroundColor = (ConsoleColor)TextColor.Text;
             Console.WriteLine(banner);
 
-            if ( !footerOnly )
+            if (!footerOnly)
             {
                 Console.ForegroundColor = (ConsoleColor)TextColor.Title;
                 Console.WriteLine("  " + title);

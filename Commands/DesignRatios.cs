@@ -8,22 +8,27 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using TeklaResultsInterrogator.Core;
+using TeklaResultsInterrogator.Utils;
+using TSD.API.Remoting.Bim;
+using TSD.API.Remoting.Common;
+using TSD.API.Remoting.Common.Properties;
 using TSD.API.Remoting.Loading;
+using TSD.API.Remoting.Sections;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
-using TSD.API.Remoting.Sections;
-using TeklaResultsInterrogator.Utils;
-using static TeklaResultsInterrogator.Utils.Utils;
-using TSD.API.Remoting.Common.Properties;
-using TSD.API.Remoting.Common;
-using TSD.API.Remoting.Bim;
+using static TeklaResultsInterrogator.Utils.ConsoleUtils;
 
 namespace TeklaResultsInterrogator.Commands
 {
+    /// <summary>
+    /// Interrogates the model to retrieve and export Design Utilization Ratios.
+    /// </summary>
     internal class DesignRatios : SolverInterrogator
     {
+        /// <inheritdoc/>
         public override bool ShowInMenu() { return true; }
 
+        /// <summary>Initializes a new instance of the <see cref="DesignRatios"/> class.</summary>
         public DesignRatios()
         {
             HasOutput = true;
@@ -75,16 +80,15 @@ namespace TeklaResultsInterrogator.Commands
             };
         }
 
+        /// <summary>
+        /// Executes the Design Ratio interrogation, retrieving static check results and writing to CSV.
+        /// </summary>
         public override async Task ExecuteAsync()
         {
             // Initialize parents
             await InitializeAsync();
 
-            // Check for null properties
-            if (Flag)
-            {
-                return;
-            }
+            if (Flag) return;
 
             // Data setup and diagnostics initialization
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -116,14 +120,13 @@ namespace TeklaResultsInterrogator.Commands
             string header1 = String.Format("{0},{1},{2},{3}\n",
                 "Tekla GUID", "Span Name", "Utilization Ratio (Static)", "Section");
 
-       
 
-            File.WriteAllText(file1, "");
-            File.AppendAllText(file1, header1);
+
+            File.WriteAllText(file1, header1);
 
             // Getting Utilization Ratios and writing table
             FancyWriteLine("\nWriting Design Check Utilization Ratio table...", TextColor.Title);
-            using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
+            using (StreamWriter sw1 = new(file1, true, Encoding.UTF8, bufferSize))
             {
                 foreach (IMember member in members)
                 {

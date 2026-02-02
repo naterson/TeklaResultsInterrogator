@@ -5,20 +5,44 @@ using System.Threading.Tasks;
 using TeklaResultsInterrogator.Utils;
 using TSD.API.Remoting.Structure;
 
+/// <summary>
+/// Represents the collection of lifts for a column member, organizing spans based on splices.
+/// </summary>
 public class ColumnLifts
 {
+    /// <summary>
+    /// The parent member (column) this object represents.
+    /// </summary>
     public IMember ParentMember { get; }
+
+    /// <summary>
+    /// The list of organized lifts, where each lift contains a list of member spans.
+    /// </summary>
     public List<NamedList<IMemberSpan>> Lifts { get; } = new();
+
+    /// <summary>
+    /// Indicates if the column has any splices.
+    /// </summary>
     public bool HasSplice { get; private set; }
 
-    // Store splice info per span index for reporting or output
+    /// <summary>
+    /// Stores splice information per span index. Key is Span Index, Value is (HasSplice, SpliceOffset).
+    /// </summary>
     public Dictionary<int, (bool HasSplice, double SpliceOffset)> SpanSpliceInfo { get; } = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ColumnLifts"/> class.
+    /// </summary>
+    /// <param name="parentMember">The parent column member.</param>
     public ColumnLifts(IMember parentMember)
     {
         ParentMember = parentMember;
     }
 
+    /// <summary>
+    /// Organizing the column spans into lifts based on splice locations.
+    /// This populates the <see cref="Lifts"/> property.
+    /// </summary>
     public async Task OrganizeBySpliceAsync()
     {
         var spans = (await ParentMember.GetSpanAsync())

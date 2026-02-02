@@ -6,15 +6,24 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using TeklaResultsInterrogator.Commands;
+using TeklaResultsInterrogator.Utils;
+using static TeklaResultsInterrogator.Utils.ConsoleUtils;
 
 namespace TeklaResultsInterrogator.Core
 {
+    /// <summary>
+    ///  Controls the main application menu loop, dynamically loading commands.
+    /// </summary>
     public class Menu
     {
         private List<MenuOption> Options { get; set; }
         private bool Waiting = true;
+        /// <summary>The currently active command/interrogator.</summary>
         public BaseInterrogator? Command { get; set; }
 
+        /// <summary>
+        /// Initializes the Menu, discovers commands, and enters the main interaction loop.
+        /// </summary>
         public Menu()
         {
             // Getting Menu Options
@@ -27,14 +36,12 @@ namespace TeklaResultsInterrogator.Core
             do
             {
                 // Get command name to execute
-                Console.Write("Type a command name: ");
-                Console.ForegroundColor = ConsoleColor.Green;
-                string? readIn = Console.ReadLine();
-                Console.ForegroundColor = ConsoleColor.White;
-                int commandIndex = Options.FindIndex(c => c.Name.ToUpper() == readIn.ToUpper());
+                string? readIn = AskUser("Type a command name:", Options.Select(o => o.Name));
+
+                int commandIndex = (!string.IsNullOrEmpty(readIn)) ? Options.FindIndex(c => c.Name.ToUpper() == readIn.ToUpper()) : -1;
 
                 // If readIn corresponds to a command in Options, Invoke it
-                if (commandIndex >=0)
+                if (commandIndex >= 0)
                 {
                     Options[commandIndex].Selected.Invoke();
                 }
@@ -52,9 +59,8 @@ namespace TeklaResultsInterrogator.Core
         private void Initialize()
         {
             // Say hello, set up console
-            Console.Clear();
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Title = "TeklaResultsInterrogator";  // Does this do anything?
+            AppHeader.PrintHeader();
+            Console.Title = "TeklaResultsInterrogator";
             Console.WriteLine("Welcome to the TeklaResultsInterrogator application.");
             Console.WriteLine("Available Commands:");
 
@@ -69,20 +75,20 @@ namespace TeklaResultsInterrogator.Core
 
         private List<MenuOption> GetMenuOptions()
         {
-            List<MenuOption> options = new List<MenuOption>();
+            List<MenuOption> options = new();
             Assembly assembly = Assembly.GetExecutingAssembly();
             List<Type> types = assembly.GetTypes().Where(t => t.Namespace == "TeklaResultsInterrogator.Commands" && t.IsNested == false).ToList();
-           
+
             foreach (Type type in types)
             {
-                    // Checks to see if the method ShowInMenu is true
-                    bool? result = Convert.ToBoolean(type.GetMethod("ShowInMenu")?.Invoke(Activator.CreateInstance(type), null));
-                    if (result==true) 
-                    {
-                        string commandName = type.Name;
-                        options.Add(new MenuOption(commandName, () => InvokeCommand(commandName)));
-                    }
- 
+                // Checks to see if the method ShowInMenu is true
+                bool? result = Convert.ToBoolean(type.GetMethod("ShowInMenu")?.Invoke(Activator.CreateInstance(type), null));
+                if (result == true)
+                {
+                    string commandName = type.Name;
+                    options.Add(new MenuOption(commandName, () => InvokeCommand(commandName)));
+                }
+
             }
             return options;
         }
@@ -126,7 +132,7 @@ namespace TeklaResultsInterrogator.Core
 
         private void Help()
         {
-            Console.WriteLine("This is the help file:");  // Update this
+            Console.WriteLine("Detailed help documentation to be implemented.");
             Waiting = true;
         }
 

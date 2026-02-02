@@ -12,79 +12,109 @@ using TSD.API.Remoting.Sections;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.UserDefinedAttributes;
-using static TeklaResultsInterrogator.Utils.Utils;
+using static TeklaResultsInterrogator.Utils.ConsoleUtils;
+
 namespace TeklaResultsInterrogator.Commands
 {
+    /// <summary>
+    /// Interrogates Steel Column forces, calculating forces at stations along the column.
+    /// </summary>
     public class SteelColumnForces : SolverInterrogator
     {
+        /// <inheritdoc/>
         public override bool ShowInMenu() => true;
+        /// <summary>Initializes a new instance of the <see cref="SteelColumnForces"/> class.</summary>
         public SteelColumnForces()
         {
             HasOutput = true;
             RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.SteelColumn };
         }
+
+        /// <summary>
+        /// Executes the Steel Column Forces interrogation, writing results to CSV.
+        /// </summary>
         public override async Task ExecuteAsync()
         {
             await InitializeAsync();
             if (Flag) return;
+
             Stopwatch stopwatch = Stopwatch.StartNew();
             int bufferSize = 65536 * 2;
-            FancyWriteLine("Loading Summary:", TextColor.Title);
-            Console.WriteLine("Unpacking loading data...");
-            Console.WriteLine($"{AllLoadcases!.Count} loadcases found, {SolvedCases!.Count} solved.");
-            Console.WriteLine($"{AllCombinations!.Count} load combinations found, {SolvedCombinations!.Count} solved.");
-            Console.WriteLine($"{AllEnvelopes!.Count} load envelopes found, {SolvedEnvelopes!.Count} solved.\n");
+
+            LogLoadingSummary();
             stopwatch.Stop();
+
             var loadingCases = AskLoading(SolvedCases, SolvedCombinations, SolvedEnvelopes);
-            bool reduced = AskReduced();
+            var reduced = AskReduced();
+
+            List<IMember> steelColumns = AskAndFilterMembers(true, true);
+
+            string? filterField = AskUser("What UDA field to filter on?");
+            string? filterValue = AskUser("What UDA value to filter on?");
+
             stopwatch.Start();
-
-            // Member Data
-            FancyWriteLine("\nMember summary:", TextColor.Title);
-            Console.WriteLine("Unpacking member data...");
-            
-            List<IMember> steelColumns = new List<IMember>();
-
-            // Filtering for Gravity Only and Autodesign
-            bool? GravityOnlyState = AskGravityOnly();
-            bool? AutoDesignState = AskAutoDesign();
-            if (GravityOnlyState == null & AutoDesignState == null)
-            {
-                steelColumns = AllMembers!.Where(c => RequestedMemberType.Contains(GetProperty(c.Data.Value.Construction))).ToList();
-            }
-            else if (AutoDesignState == null)
-            {
-                steelColumns = AllMembers!.Where(c => RequestedMemberType.Contains(GetProperty(c.Data.Value.Construction)) & GetProperty(c.Data.Value.GravityOnly) == GravityOnlyState).ToList();
-            }
-            else if (GravityOnlyState == null)
-            {
-                steelColumns = AllMembers!.Where(c => RequestedMemberType.Contains(GetProperty(c.Data.Value.Construction)) & GetProperty(c.Data.Value.AutoDesign) == AutoDesignState).ToList();
-            }
-            else
-            {
-                steelColumns = AllMembers!.Where(c => RequestedMemberType.Contains(GetProperty(c.Data.Value.Construction)) & GetProperty(c.Data.Value.AutoDesign) == AutoDesignState & GetProperty(c.Data.Value.GravityOnly) == GravityOnlyState).ToList();
-            };
-
-            string filterField = AskUser("What UDA field to filter on?");
-            string filterValue = AskUser("What UDA value to filter on?");
-            Console.WriteLine($"{AllMembers.Count} structural members found in model.");
+            Console.WriteLine($"{AllMembers!.Count} structural members found in model.");
             Console.WriteLine($"{steelColumns.Count} steel columns found.");
-            var levels = (await Model!.GetLevelsAsync()).ToList();
+
+            // Organize Levels
+            var rawLevels = await Model!.GetLevelsAsync();
+            var levels = new List<IHorizontalConstructionPlane>();
+            foreach (var item in rawLevels)
+            {
+                if (item is IHorizontalConstructionPlane hcp) levels.Add(hcp);
+            }
+
             double timeUnpack = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
             Console.WriteLine($"Loading and member data unpacked in {timeUnpack} seconds.\n");
+
+            // Organize Column Lifts & Pre-Fetch Geometry
             FancyWriteLine("Organizing Column Spans and Splices...", TextColor.Title);
-            var steelColumnSpans = new List<ColumnSpansSteel>();
-            foreach (var column in steelColumns)
+
+            // Phase 1: Organize Spans and Collect Indices
+            var columnData = new System.Collections.Concurrent.ConcurrentBag<(IMember Member, ColumnSpansSteel Spans)>();
+            var allPointIndices = new System.Collections.Concurrent.ConcurrentBag<int>();
+
+            var preTasks = new List<Task>();
+            object consoleLock = new();
+
+            foreach (var col in steelColumns)
             {
-                var colSpans = new ColumnSpansSteel(column);
-                await colSpans.OrganizeSpansAsync();
-                Console.WriteLine($"Column {column.Name} has splice? {(colSpans.HasSplice ? "Yes" : "No")}");
-                Console.WriteLine($"  -> {colSpans.Spans.Count} spans total (all spans together)");
-                steelColumnSpans.Add(colSpans);
+                preTasks.Add(Task.Run(async () =>
+                {
+                    var colSpans = new ColumnSpansSteel(col);
+                    await colSpans.OrganizeSpansAsync();
+
+                    columnData.Add((col, colSpans));
+
+                    // Log progress
+                    lock (consoleLock)
+                    {
+                        string spliceText = colSpans.HasSplice ? "has splice" : "no splice";
+                        Console.WriteLine($"Column {col.Name}: {colSpans.Spans.Count} spans, {spliceText}");
+                    }
+
+                    // Collect indices from spans (Start/End nodes of each span)
+                    foreach (var span in colSpans.Spans)
+                    {
+                        if (span.StartMemberNode?.ConstructionPointIndex != null)
+                            allPointIndices.Add(span.StartMemberNode.ConstructionPointIndex.Value);
+                        if (span.EndMemberNode?.ConstructionPointIndex != null)
+                            allPointIndices.Add(span.EndMemberNode.ConstructionPointIndex.Value);
+                    }
+                }));
             }
-            double endWatch = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
-            Console.WriteLine($"Column spans organized in {Math.Round(endWatch - timeUnpack, 3)} seconds.\n");
-            // Prepare output CSV file with all required columns
+            await Task.WhenAll(preTasks);
+
+            // Phase 2: Batch Fetch Construction Points
+            var uniqueIndices = allPointIndices.Distinct().ToList();
+            Console.WriteLine($"\nFetching coordinates for {uniqueIndices.Count} unique points...");
+            var pointsList = await Model.GetConstructionPointsAsync(uniqueIndices);
+            var pointsDict = pointsList.ToDictionary(p => p.Index, p => p);
+
+            // Phase 3: Process Forces (Parallel)
+            FancyWriteLine("\nQuerying Steel Column Forces (Parallel)...", TextColor.Title);
+
+            // Prepare CSV
             string file1 = SaveDirectory + @"SteelColumnForces_" + OutputFileName + ".csv";
             string header1 = "Tekla GUID,UDA Filter,Member Name,Span Name,Start Level,End Level,Shape,Material," +
                              "Start Node,Start Node Fixity,X_StartNode,Y_StartNode,Z_StartNode," +
@@ -93,228 +123,234 @@ namespace TeklaResultsInterrogator.Commands
                              "Axial Force [k],Shear Major [k],Shear Minor [k],Moment Major [k-ft],Moment Minor [k-ft],Torsion [k-ft],Has Splice?\n";
             File.WriteAllText(file1, "");
             File.AppendAllText(file1, header1);
-            FancyWriteLine("Writing internal forces table...", TextColor.Title);
-            using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
+
+
+
+            // Parallel Execution
+            var tasks = new List<Task<List<string>>>();
+            foreach (var (member, spans) in columnData)
             {
-                //Looping through Members
-                foreach (var columnSpans in steelColumnSpans)
+                tasks.Add(Task.Run(() => ProcessColumnAsync(member, spans, loadingCases, reduced, filterField, filterValue, levels, pointsDict)));
+            }
+
+            var results = await Task.WhenAll(tasks);
+            double endWatch = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
+
+            // Writing Results
+            FancyWriteLine("Writing internal forces table...", TextColor.Title);
+            using (StreamWriter sw1 = new(file1, true, Encoding.UTF8, bufferSize))
+            {
+                foreach (var result in results)
                 {
-                    var member = columnSpans.ParentMember;
-                    string memberName = member.Name;
-                 
-                    bool hasSplice = columnSpans.HasSplice;
-                    string hasSpliceText = hasSplice ? "Yes" : "No";
-
-
-                    // Loop through spans, ordered by span index
-                    var allSpans = columnSpans.Spans.OrderBy(s => s.Index);
-                    foreach (var span in allSpans)
+                    foreach (var line in result)
                     {
-                        Guid id = span.Id;
-                        var spliceInfo = columnSpans.SpanSpliceInfo.TryGetValue(span.Index, out var si)
-                            ? si
-                            : (HasSplice: false, SpliceOffset: 0.0);
-                        double spliceOffsetInches = spliceInfo.SpliceOffset / 25.4;
-                        // Get start and end node construction points
-                        int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
-                        var startPoints = await Model.GetConstructionPointsAsync(new List<int> { startNodeIdx });
-                        var startPoint = startPoints.First();
-                        double startX = startPoint.Coordinates.Value.X * 0.00328084;
-                        double startY = startPoint.Coordinates.Value.Y * 0.00328084;
-                        double startZ = startPoint.Coordinates.Value.Z * 0.00328084;
-                        var startPlaneIds = startPoints
-                            .Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane)
-                            .Select(p => p.PlaneInfo.Value.Index);
-                        string startLevelName = startPlaneIds.Any()
-                            ? (await Model.GetLevelsAsync(startPlaneIds)).First().Name
-                            : $"~{levels.OrderBy(l => Math.Abs(startPoint.Coordinates.Value.Z - l.Level.Value)).First().Name}";
-                        int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
-                        var endPoints = await Model.GetConstructionPointsAsync(new List<int> { endNodeIdx });
-                        var endPoint = endPoints.First();
-                        double endX = endPoint.Coordinates.Value.X * 0.00328084;
-                        double endY = endPoint.Coordinates.Value.Y * 0.00328084;
-                        double endZ = endPoint.Coordinates.Value.Z * 0.00328084;
-                        var endPlaneIds = endPoints
-                            .Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane)
-                            .Select(p => p.PlaneInfo.Value.Index);
-                        string endLevelName = endPlaneIds.Any()
-                            ? (await Model.GetLevelsAsync(endPlaneIds)).First().Name
-                            : $"~{levels.OrderBy(l => Math.Abs(endPoint.Coordinates.Value.Z - l.Level.Value)).First().Name}";
-                        // Get section and material info
-                        string sectionName = "Unknown";
-                        string materialName = "Unknown";
-                        if (span.ElementSection.Value != null)
-                        {
-                            var elementSection = (IMemberSection)span.ElementSection.Value;
-                            var physicalSection = (ISection)elementSection.PhysicalSection.Value;
-                            sectionName = physicalSection.LongName;
-                        }
-                        if (span.Material?.Value != null)
-                        {
-                            materialName = span.Material.Value.Name;
-                        }
-                        double lengthFt = span.Length.Value * 0.00328084;
-                        // Get span rotation in degrees
-                        double rotationDeg = span.RotationAngle.Value * (180.0 / Math.PI);
-                        // Get node fixity information
-                        string startNodeFixity = GetNodeFixityDescription(span.StartReleases.Value);
-                        string endNodeFixity = GetNodeFixityDescription(span.EndReleases.Value);
-                        // Start and end node names/IDs - use index since Name might not be available
-                        string startNodeName = $"{startNodeIdx}";
-                        string endNodeName = $"{endNodeIdx}";
-                        // Prepare list of positions to query (Start, Splice if exists and valid, End)
-                        var positions = new List<(string LocationName, double PositionMm)>()
-                        {
-                            ("Start", 0.0),
-                            ("End", span.Length.Value)
-                        };
-                        if (spliceInfo.HasSplice && spliceInfo.SpliceOffset > 0 && spliceInfo.SpliceOffset < span.Length.Value)
-                        {
-                            positions.Insert(1, ("Splice", spliceInfo.SpliceOffset));
-                        }
-                        foreach (var loadingCase in loadingCases)
-                        {
-                            // Check UDA filter for this span
-                            var udas = await span.GetUserDefinedAttributesAsync();
-                            if (!string.IsNullOrEmpty(filterValue))
-                            {
-                                bool match = udas.Any(c =>
-                                    (c as IUserDefinedTextAttribute)?.Text.Equals(filterValue, StringComparison.CurrentCultureIgnoreCase) == true &&
-                                    c?.AttributeDefinitionName.Equals(filterField, StringComparison.CurrentCultureIgnoreCase) == true);
-                                if (!match) continue;
-                            }
-                            IMemberLoading memberLoading = await member.GetLoadingAsync(loadingCase.Id, RequestedAnalysisType, LoadingResultType.Base);
-                            foreach (var (locationName, positionMm) in positions)
-                            {
-                                double axialForce = await GetLoadingValueAtPosition(memberLoading, LoadingValueType.Force, LoadingDirection.Axial, positionMm, reduced, span.Index);
-                                double shearMajor = await GetLoadingValueAtPosition(memberLoading, LoadingValueType.Force, LoadingDirection.Major, positionMm, reduced, span.Index);
-                                double shearMinor = await GetLoadingValueAtPosition(memberLoading, LoadingValueType.Force, LoadingDirection.Minor, positionMm, reduced, span.Index);
-                                double momentMajor = await GetLoadingValueAtPosition(memberLoading, LoadingValueType.Moment, LoadingDirection.Major, positionMm, reduced, span.Index);
-                                double momentMinor = await GetLoadingValueAtPosition(memberLoading, LoadingValueType.Moment, LoadingDirection.Minor, positionMm, reduced, span.Index);
-                                double torsion = await GetLoadingValueAtPosition(memberLoading, LoadingValueType.Moment, LoadingDirection.Axial, positionMm, reduced, span.Index);
-                                string line = $"{EscapeCsvValue(id.ToString())},{EscapeCsvValue(filterValue)},{EscapeCsvValue(memberName)},{EscapeCsvValue(span.Name)},{EscapeCsvValue(startLevelName)},{EscapeCsvValue(endLevelName)},{EscapeCsvValue(sectionName)},{EscapeCsvValue(materialName)}," +
-                                              $"{EscapeCsvValue(startNodeName)},{EscapeCsvValue(startNodeFixity)},{startX:F3},{startY:F3},{startZ:F3}," +
-                                              $"{EscapeCsvValue(endNodeName)},{EscapeCsvValue(endNodeFixity)},{endX:F3},{endY:F3},{endZ:F3}," +
-                                              $"{lengthFt:F3},{rotationDeg:F3},{EscapeCsvValue(loadingCase.Name)},{EscapeCsvValue(locationName)}," +
-                                              $"{axialForce},{shearMajor},{shearMinor},{momentMajor},{momentMinor},{torsion},{EscapeCsvValue(hasSpliceText)}";
-                                sw1.WriteLine(line);
-                            }
-                        }
+                        sw1.WriteLine(line);
                     }
                 }
             }
+
             FancyWriteLine("Saved to: ", file1, "", TextColor.Path);
             double sizeKB = Math.Round(new FileInfo(file1).Length / 1024.0, 2);
             Console.WriteLine($"File size: {sizeKB} KB");
             double timeCSV = Math.Round(stopwatch.Elapsed.TotalSeconds - endWatch, 3);
             Console.WriteLine($"Steel Column table written in {timeCSV} seconds.\n");
+
             stopwatch.Stop();
             ExecutionTime = stopwatch.Elapsed.TotalSeconds;
             Check();
         }
-        private static async Task<double> GetLoadingValueAtPosition(
+
+        private async Task<List<string>> ProcessColumnAsync(
+            IMember member,
+            ColumnSpansSteel columnSpans,
+            List<ILoadingCase> loadingCases,
+            bool reduced,
+            string? filterField,
+            string? filterValue,
+            List<IHorizontalConstructionPlane> levels,
+            Dictionary<int, IConstructionPoint> pointsDict)
+        {
+            var lines = new List<string>();
+            // Note: columnSpans already organized
+
+            var allSpans = columnSpans.Spans.OrderBy(s => s.Index);
+            bool hasSplice = columnSpans.HasSplice;
+            string hasSpliceText = hasSplice ? "Yes" : "No";
+
+            var spanTasks = new List<Task<List<string>>>();
+            foreach (var span in allSpans)
+            {
+                spanTasks.Add(GetSpanForcesAsync(
+                    member, span, columnSpans, loadingCases, reduced, filterField, filterValue, levels, hasSpliceText, pointsDict));
+            }
+
+            var spanResults = await Task.WhenAll(spanTasks);
+            foreach (var res in spanResults) lines.AddRange(res);
+
+            return lines;
+        }
+
+        private async Task<List<string>> GetSpanForcesAsync(
+            IMember member,
+            IMemberSpan span,
+            ColumnSpansSteel columnSpans,
+            List<ILoadingCase> loadingCases,
+            bool reduced,
+            string? filterField,
+            string? filterValue,
+            List<IHorizontalConstructionPlane> levels,
+            string hasSpliceText,
+            Dictionary<int, IConstructionPoint> pointsDict)
+        {
+            var lines = new List<string>();
+
+            // Filter Check
+            var udas = await span.GetUserDefinedAttributesAsync();
+            if (!string.IsNullOrEmpty(filterValue))
+            {
+                bool match = udas.Any(c =>
+                    (c as IUserDefinedTextAttribute)?.Text.Equals(filterValue, StringComparison.CurrentCultureIgnoreCase) == true &&
+                    c?.AttributeDefinitionName.Equals(filterField, StringComparison.CurrentCultureIgnoreCase) == true);
+                if (!match) return lines;
+            }
+
+            Guid id = span.Id;
+            var (hasSplice, spliceOffset) = columnSpans.SpanSpliceInfo.TryGetValue(span.Index, out var si)
+                ? si
+                : (HasSplice: false, SpliceOffset: 0.0);
+
+            // Nodes & Geometry
+            int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
+            IConstructionPoint? startPoint = pointsDict.ContainsKey(startNodeIdx) ? pointsDict[startNodeIdx] : null;
+            double startX = 0, startY = 0, startZ = 0;
+            string startLevelName = "Unknown";
+
+            if (startPoint != null)
+            {
+                startX = MmToFt(startPoint.Coordinates.Value.X);
+                startY = MmToFt(startPoint.Coordinates.Value.Y);
+                startZ = MmToFt(startPoint.Coordinates.Value.Z);
+                startLevelName = GetLevelName(startPoint.Coordinates.Value.Z, startPoint, levels);
+            }
+
+            int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
+            IConstructionPoint? endPoint = pointsDict.ContainsKey(endNodeIdx) ? pointsDict[endNodeIdx] : null;
+            double endX = 0, endY = 0, endZ = 0;
+            string endLevelName = "Unknown";
+
+            if (endPoint != null)
+            {
+                endX = MmToFt(endPoint.Coordinates.Value.X);
+                endY = MmToFt(endPoint.Coordinates.Value.Y);
+                endZ = MmToFt(endPoint.Coordinates.Value.Z);
+                endLevelName = GetLevelName(endPoint.Coordinates.Value.Z, endPoint, levels);
+            }
+
+            // Section & Material
+            string sectionName = "Unknown";
+            string materialName = "Unknown";
+            if (span.ElementSection.Value != null)
+            {
+                var elementSection = (IMemberSection)span.ElementSection.Value;
+                var physicalSection = (ISection)elementSection.PhysicalSection.Value;
+                sectionName = physicalSection.LongName;
+            }
+            if (span.Material?.Value != null)
+            {
+                materialName = span.Material.Value.Name;
+            }
+
+            double lengthFt = MmToFt(span.Length.Value);
+            double rotationDeg = RadToDeg(span.RotationAngle.Value);
+            string startNodeFixity = GetNodeFixityDescription(span.StartReleases.Value);
+            string endNodeFixity = GetNodeFixityDescription(span.EndReleases.Value);
+            string startNodeName = $"{startNodeIdx}";
+            string endNodeName = $"{endNodeIdx}";
+
+            // Prepare Positions
+            var positions = new List<(string LocationName, double PositionMm)>
+            {
+                ("Start", 0.0)
+            };
+            // Splice
+            if (hasSplice && spliceOffset > 0 && spliceOffset < span.Length.Value)
+            {
+                positions.Insert(1, ("Splice", spliceOffset)); // Insert in middle if between start/end
+            }
+            positions.Add(("End", span.Length.Value));
+
+            var positionsMm = positions.Select(p => p.PositionMm).ToList();
+
+            foreach (var loadingCase in loadingCases)
+            {
+                IMemberLoading memberLoading = await member.GetLoadingAsync(loadingCase.Id, RequestedAnalysisType, LoadingResultType.Base);
+
+                // Batch Fetch (Parallel calls as fallback)
+                var axialForcesTask = GetBatchedLoadingValues(memberLoading, LoadingValueType.Force, LoadingDirection.Axial, positionsMm, reduced, span.Index);
+                var majorShearsTask = GetBatchedLoadingValues(memberLoading, LoadingValueType.Force, LoadingDirection.Major, positionsMm, reduced, span.Index);
+                var minorShearsTask = GetBatchedLoadingValues(memberLoading, LoadingValueType.Force, LoadingDirection.Minor, positionsMm, reduced, span.Index);
+                var majorMomentsTask = GetBatchedLoadingValues(memberLoading, LoadingValueType.Moment, LoadingDirection.Major, positionsMm, reduced, span.Index);
+                var minorMomentsTask = GetBatchedLoadingValues(memberLoading, LoadingValueType.Moment, LoadingDirection.Minor, positionsMm, reduced, span.Index);
+                var torsionsTask = GetBatchedLoadingValues(memberLoading, LoadingValueType.Moment, LoadingDirection.Axial, positionsMm, reduced, span.Index);
+
+                await Task.WhenAll(axialForcesTask, majorShearsTask, minorShearsTask, majorMomentsTask, minorMomentsTask, torsionsTask);
+
+                var axialForces = axialForcesTask.Result;
+                var majorShears = majorShearsTask.Result;
+                var minorShears = minorShearsTask.Result;
+                var majorMoments = majorMomentsTask.Result;
+                var minorMoments = minorMomentsTask.Result;
+                var torsions = torsionsTask.Result;
+
+                for (int i = 0; i < positions.Count; i++)
+                {
+                    var (locationName, positionMm) = positions[i];
+                    double axialForce = axialForces.ElementAtOrDefault(i) * ConversionFactor(LoadingValueType.Force);
+                    double shearMajor = majorShears.ElementAtOrDefault(i) * ConversionFactor(LoadingValueType.Force);
+                    double shearMinor = minorShears.ElementAtOrDefault(i) * ConversionFactor(LoadingValueType.Force);
+                    double momentMajor = majorMoments.ElementAtOrDefault(i) * ConversionFactor(LoadingValueType.Moment);
+                    double momentMinor = minorMoments.ElementAtOrDefault(i) * ConversionFactor(LoadingValueType.Moment);
+                    double torsion = torsions.ElementAtOrDefault(i) * ConversionFactor(LoadingValueType.Moment);
+
+                    string line = $"{EscapeCsvValue(id.ToString())},{EscapeCsvValue(filterValue)},{EscapeCsvValue(member.Name)},{EscapeCsvValue(span.Name)},{EscapeCsvValue(startLevelName)},{EscapeCsvValue(endLevelName)},{EscapeCsvValue(sectionName)},{EscapeCsvValue(materialName)}," +
+                                  $"{EscapeCsvValue(startNodeName)},{EscapeCsvValue(startNodeFixity)},{startX:F3},{startY:F3},{startZ:F3}," +
+                                  $"{EscapeCsvValue(endNodeName)},{EscapeCsvValue(endNodeFixity)},{endX:F3},{endY:F3},{endZ:F3}," +
+                                  $"{lengthFt:F3},{rotationDeg:F3},{EscapeCsvValue(loadingCase.Name)},{EscapeCsvValue(locationName)}," +
+                                  $"{axialForce:F3},{shearMajor:F3},{shearMinor:F3},{momentMajor:F3},{momentMinor:F3},{torsion:F3},{EscapeCsvValue(hasSpliceText)}";
+                    lines.Add(line);
+                }
+            }
+
+            return lines;
+        }
+
+        private static async Task<IEnumerable<double>> GetBatchedLoadingValues(
             IMemberLoading loading,
             LoadingValueType valueType,
             LoadingDirection direction,
-            double positionMm,
+            IEnumerable<double> positionsMm,
             bool reduced,
             int spanIndex)
         {
             var option = LoadingValueOptions.StaticValue(valueType, direction, reduced);
-            IEnumerable<ILoadingValue> values = await loading.GetValueAsync(option, spanIndex, positionMm);
-            values = values.OrderByDescending(lv => lv.Value);
-            double valCon = ConversionFactor(valueType);
-            if (values.Any())
-                return values.First().Value * valCon;
-            return 0.0;
-        }
-        private static string GetNodeFixityDescription(ISpanReleases releases)
-        {
-            if (releases == null) return "Fixed";
-            var fixityParts = new List<string>();
-            try
+            // Parallel requests for each position
+            var tasks = new List<Task<double>>();
+            foreach (var pos in positionsMm)
             {
-                var hasTransX = HasTranslationalRelease(releases, "X");
-                var hasTransY = HasTranslationalRelease(releases, "Y");
-                var hasTransZ = HasTranslationalRelease(releases, "Z");
-                var hasRotX = HasRotationalRelease(releases, "X");
-                var hasRotY = HasRotationalRelease(releases, "Y");
-                var hasRotZ = HasRotationalRelease(releases, "Z");
-                if (!hasTransX) fixityParts.Add("Tx");
-                if (!hasTransY) fixityParts.Add("Ty");
-                if (!hasTransZ) fixityParts.Add("Tz");
-                if (!hasRotX) fixityParts.Add("Rx");
-                if (!hasRotY) fixityParts.Add("Ry");
-                if (!hasRotZ) fixityParts.Add("Rz");
-                if (fixityParts.Count == 6)
-                    return "Fixed";
-                else if (fixityParts.Count == 0)
-                    return "Pinned";
-                else
-                    return string.Join("-", fixityParts);
-            }
-            catch
-            {
-                return "Unknown";
-            }
-        }
-        private static bool HasTranslationalRelease(ISpanReleases releases, string direction)
-        {
-            try
-            {
-                var type = releases.GetType();
-                var property = type.GetProperty($"Translation{direction}") ??
-                              type.GetProperty($"Translation{direction}Released") ??
-                              type.GetProperty($"IsTranslation{direction}Released");
-                if (property != null)
+                tasks.Add(Task.Run(async () =>
                 {
-                    var value = property.GetValue(releases);
-                    if (value is bool boolValue)
-                        return boolValue;
-                    else if (value != null && value.GetType().GetProperty("Value") != null)
-                        return (bool)value.GetType().GetProperty("Value").GetValue(value);
-                }
+                    var values = await loading.GetValueAsync(option, spanIndex, pos);
+                    // Select the value with the largest magnitude (Absolute Max).
+                    // This ensures we capture large negative values (e.g. Max Tension) which are 
+                    // significant but would be ignored by a simple algebraic Max().
+                    // The original sign is preserved in the returned value.
+                    return values.MaxBy(lv => Math.Abs(lv.Value))?.Value ?? 0.0;
+                }));
             }
-            catch { }
-            return false; // Default to not released (fixed)
-        }
-        private static bool HasRotationalRelease(ISpanReleases releases, string direction)
-        {
-            try
-            {
-                var type = releases.GetType();
-                var property = type.GetProperty($"Rotation{direction}") ??
-                              type.GetProperty($"Rotation{direction}Released") ??
-                              type.GetProperty($"IsRotation{direction}Released");
-                if (property != null)
-                {
-                    var value = property.GetValue(releases);
-                    if (value is bool boolValue)
-                        return boolValue;
-                    else if (value != null && value.GetType().GetProperty("Value") != null)
-                        return (bool)value.GetType().GetProperty("Value").GetValue(value);
-                }
-            }
-            catch { }
-            return false; // Default to not released (fixed)
+            return await Task.WhenAll(tasks);
         }
 
-        /// <summary>
-        /// Escapes CSV values: adds quotes if contains comma, quotes or line breaks,
-        /// and doubles any embedded quotes.
-        /// </summary>
-        /// <param name="value">Raw CSV field value</param>
-        /// <returns>Escaped CSV value</returns>
-        private static string EscapeCsvValue(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return "";
-            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
-            {
-                value = value.Replace("\"", "\"\"");
-                return $"\"{value}\"";
-            }
-            return value;
-        }
+        // Helper to get level name safely
+
     }
 }

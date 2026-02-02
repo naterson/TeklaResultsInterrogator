@@ -7,18 +7,25 @@ using TeklaResultsInterrogator.Core;
 
 namespace TeklaResultsInterrogator.Commands
 {
+    /// <summary>
+    /// A diagnostic command to display all available Console colors.
+    /// </summary>
     internal class ConsoleColors : BaseInterrogator
     {
 
-      
-
-        public ConsoleColors() {
 
 
-            
+        public ConsoleColors()
+        {
+
+
+
 
         }
 
+        /// <summary>
+        /// Executes the command to print console colors.
+        /// </summary>
         public override async Task ExecuteAsync()
         {
             await InitializeAsync();

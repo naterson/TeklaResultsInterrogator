@@ -1,26 +1,34 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using TeklaResultsInterrogator.Utils;
-using static TeklaResultsInterrogator.Utils.Utils;
-
 using TSD.API.Remoting;
 using TSD.API.Remoting.Document;
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
-
+using static TeklaResultsInterrogator.Utils.ConsoleUtils;
 using AnalysisType = TSD.API.Remoting.Solver.AnalysisType;
 
 namespace TeklaResultsInterrogator.Core
 {
+    /// <summary>
+    /// Interrogates Vibration Analysis results (Mode Shapes, Frequencies).
+    /// </summary>
     public class VibrationInterrogator : BaseInterrogator
     {
-        private AnalysisType AnalysisType = AnalysisType.FirstOrderVibration;
+        private readonly AnalysisType AnalysisType = AnalysisType.FirstOrderVibration;
+        /// <summary>The TSD Solver Model interface.</summary>
         protected TSD.API.Remoting.Solver.IModel? SolverModel { get; set; }
+        /// <summary>The mesh nodes in the model.</summary>
         protected IEnumerable<INode>? Nodes { get; set; }
+        /// <summary>The vibration loading object.</summary>
         protected ILoadingVibration? LoadingVibration { get; set; }
 
+        /// <summary>Initializes a new instance of the <see cref="VibrationInterrogator"/> class.</summary>
         public VibrationInterrogator() { }
 
+        /// <summary>
+        /// Initializes the Vibration Interrogator, retrieving specific Vibration Solver Model and Results.
+        /// </summary>
         public override async Task InitializeAsync()
         {
             Stopwatch stopwatch = Stopwatch.StartNew();

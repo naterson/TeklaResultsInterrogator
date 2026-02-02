@@ -8,33 +8,39 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using TeklaResultsInterrogator.Core;
+using TeklaResultsInterrogator.Utils;
 using TSD.API.Remoting.Loading;
+using TSD.API.Remoting.Sections;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure;
-using TSD.API.Remoting.Sections;
-using TeklaResultsInterrogator.Utils;
-using static TeklaResultsInterrogator.Utils.Utils;
 using TSD.API.Remoting.UserDefinedAttributes;
+using static TeklaResultsInterrogator.Utils.ConsoleUtils;
 
 namespace TeklaResultsInterrogator.Commands
 {
+    /// <summary>
+    /// Interrogates Timber Beam forces.
+    /// </summary>
     internal class TimberBeamForces : SolverInterrogator
     {
 
+        /// <inheritdoc/>
         public override bool ShowInMenu() { return true; }
 
+        /// <summary>Initializes a new instance of the <see cref="TimberBeamForces"/> class.</summary>
         public TimberBeamForces()
         {
             HasOutput = true;
             RequestedMemberType = new List<MemberConstruction>() { MemberConstruction.TimberBeam };
         }
 
+        /// <summary>
+        /// Executes the Timber Beam Forces interrogation.
+        /// </summary>
         public override async Task ExecuteAsync()
         {
-            // Initialize parents
             await InitializeAsync();
 
-            // Check for null properties
             if (Flag)
             {
                 return;
@@ -45,27 +51,19 @@ namespace TeklaResultsInterrogator.Commands
             int bufferSize = 65536 * 2;
 
             // Unpacking loading data
-            FancyWriteLine("Loading Summary:", TextColor.Title);
-            Console.WriteLine("Unpacking loading data...");
-            Console.WriteLine($"{AllLoadcases.Count} loadcases found, {SolvedCases.Count} solved.");
-            Console.WriteLine($"{AllCombinations.Count} load combinations found, {SolvedCombinations.Count} solved.");
-            Console.WriteLine($"{AllEnvelopes.Count} load envelopes found, {SolvedEnvelopes.Count} solved.\n");
+            LogLoadingSummary();
 
             stopwatch.Stop();
             List<ILoadingCase> loadingCases = AskLoading(SolvedCases, SolvedCombinations, SolvedEnvelopes);
             bool reduced = AskReduced();
+
+            List<IMember> timberBeams = AskAndFilterMembers(false, false);
+
+            string? filterField = AskUser("What UDA field to filter on?");
+            string? filterValue = AskUser("What UDA value to filter on?");
+
             stopwatch.Start();
-
-            // Unpacking member data
-            FancyWriteLine("\nMember summary:", TextColor.Title);
-            Console.WriteLine("Unpacking member data...");
-
-            List<IMember> timberBeams = AllMembers.Where(c => RequestedMemberType.Contains(GetProperty(c.Data.Value.Construction))).ToList();
-
-            string filterField = AskUser("What UDA field to filter on?");
-            string filterValue = AskUser("What UDA value to filter on?");
-
-            Console.WriteLine($"{AllMembers.Count} structural members found in model.");
+            Console.WriteLine($"{AllMembers!.Count} structural members found in model.");
             Console.WriteLine($"{timberBeams.Count} timber beams found.");
 
             double timeUnpack = Math.Round(stopwatch.Elapsed.TotalSeconds, 3);
@@ -86,87 +84,79 @@ namespace TeklaResultsInterrogator.Commands
             File.WriteAllText(file1, "");
             File.AppendAllText(file1, header1);
 
-            // Getting internal forces and writing table
-            FancyWriteLine("\nWriting internal forces table...", TextColor.Title);
-            using (StreamWriter sw1 = new StreamWriter(file1, true, Encoding.UTF8, bufferSize))
+            // Phase 1: Pre-fetch Identification (Parallel)
+            var timberData = new List<(IMember Member, IEnumerable<IMemberSpan> Spans)>();
+            var allPointIndices = new List<int>();
+
+            // Collect spans and point indices
+            FancyWriteLine("Identifying spans and nodes...", TextColor.Title);
+            var preTasks = new List<Task>();
+            foreach (var beam in timberBeams)
             {
-                foreach (IMember member in timberBeams)
+                preTasks.Add(Task.Run(async () =>
                 {
-                    string name = member.Name;
-                    Guid id = member.Id;
-                    IEnumerable<IMemberSpan> spans = await member.GetSpanAsync();
-
-                    int constructionPointIndex = member.MemberNodes.Value.First().Value.ConstructionPointIndex.Value;
-                    IEnumerable<IConstructionPoint> constructionPoints = await Model.GetConstructionPointsAsync(new List<int>() { constructionPointIndex });
-                    int planeId = constructionPoints.First().PlaneInfo.Value.Index;
-                    IEnumerable<IHorizontalConstructionPlane> level = await Model.GetLevelsAsync(new List<int>() { planeId });
-                    string levelName;
-                    if (level.Any())
+                    var spans = await beam.GetSpanAsync();
+                    lock (timberData)
                     {
-                        levelName = level.First().Name;
+                        timberData.Add((beam, spans));
                     }
-                    else
+                    lock (allPointIndices)
                     {
-                        levelName = "Not Associated";
+                        // Member Start Node (for Level)
+                        if (beam.MemberNodes.Value.First().Value.ConstructionPointIndex != null)
+                            allPointIndices.Add(beam.MemberNodes.Value.First().Value.ConstructionPointIndex.Value);
+
+                        // Span Start/End Nodes
+                        foreach (var span in spans)
+                        {
+                            if (span.StartMemberNode?.ConstructionPointIndex != null)
+                                allPointIndices.Add(span.StartMemberNode.ConstructionPointIndex.Value);
+                            if (span.EndMemberNode?.ConstructionPointIndex != null)
+                                allPointIndices.Add(span.EndMemberNode.ConstructionPointIndex.Value);
+                        }
                     }
+                }));
+            }
+            await Task.WhenAll(preTasks);
 
-                    foreach (IMemberSpan span in spans)
+            // Phase 2: Batch Fetch Construction Points & Levels
+            var uniqueIndices = allPointIndices.Distinct().ToList();
+            Console.WriteLine($"\nFetching coordinates for {uniqueIndices.Count} unique points...");
+            var pointsList = await Model!.GetConstructionPointsAsync(uniqueIndices);
+            var pointsDict = pointsList.ToDictionary(p => p.Index, p => p);
+
+            // Identify unique planes (Levels) from member start nodes
+            var planeIndices = pointsList.Where(p => p.PlaneInfo.Value.Type == TSD.API.Remoting.Common.EntityType.HorizontalConstructionPlane)
+                                         .Select(p => p.PlaneInfo.Value.Index).Distinct().ToList();
+            var levelsList = await Model.GetLevelsAsync(planeIndices);
+            var levelsDict = levelsList.ToDictionary(l => l.Index, l => l); // Map Plane Index -> Level Object
+
+            // Getting internal forces and writing table
+            FancyWriteLine("\nQuerying Timber Beam Forces (Parallel)...", TextColor.Title);
+
+            // Phase 3: Process Forces (Parallel)
+            var tasks = new List<Task<List<string>>>();
+
+
+
+            foreach (var (member, spans) in timberData)
+            {
+                tasks.Add(Task.Run(() => ProcessMemberAsync(member, spans, loadingCases, reduced, RequestedAnalysisType, filterField, filterValue, pointsDict, levelsDict)));
+            }
+
+            var results = await Task.WhenAll(tasks);
+
+            // Phase 4: Output
+            FancyWriteLine("Writing internal forces table...", TextColor.Title);
+            using (StreamWriter sw1 = new(file1, true, Encoding.UTF8, bufferSize))
+            {
+                // Collective output of results
+
+                foreach (var batch in results)
+                {
+                    foreach (var line in batch)
                     {
-
-                        var udas = await span.GetUserDefinedAttributesAsync(); 
-
-                        // if there isn't at least one uda matching filterValue, skip code below
-                        if (string.IsNullOrEmpty(filterValue) == false)
-                        {
-                            bool udaMatchingFilterValueExists = udas.Where(c => 
-                                (c as IUserDefinedTextAttribute)?.Text.Equals(filterValue, StringComparison.CurrentCultureIgnoreCase) == true 
-                                && c?.AttributeDefinitionName.Equals(filterField,StringComparison.CurrentCultureIgnoreCase) == true)
-                                ?.Any() == true;
-                            if (udaMatchingFilterValueExists == false)
-                            {
-                                continue;
-                            }
-                        }
-                        
-                        string spanName = span.Name;
-                        int spanIdx = span.Index;
-                        double length = span.Length.Value;
-                        double lengthFt = length * 0.00328084; // Converting from [mm] to [ft]
-                        double rot = Math.Round(span.RotationAngle.Value * 57.2958, 3); // Converting from [rad] to [deg]
-                        IMemberSection generalSection = (IMemberSection)span.ElementSection.Value;
-                        ITimberBeamSection section = (ITimberBeamSection)generalSection.PhysicalSection.Value;
-                        string sectionName = section.LongName;
-                        double breadth = Math.Round(section.Breadth * 0.0393701, 4);  // Converting from [mm] to [in]
-                        double depth = Math.Round(section.Depth * 0.0393701, 4);  // Converting from [mm] to [in]
-
-                        int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
-                        string startNodeFixity = GetProperty(span.StartReleases.Value.DegreeOfFreedom).ToString();
-                        if (GetProperty(span.StartReleases.Value.Cantilever) == true)
-                        {
-                            startNodeFixity += " (Cantilever end)";
-                        }
-                        startNodeFixity = startNodeFixity.Replace(',', '|');
-                        int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
-                        string endNodeFixity = GetProperty(span.EndReleases.Value.DegreeOfFreedom).ToString();
-                        if (GetProperty(span.EndReleases.Value.Cantilever) == true)
-                        {
-                            endNodeFixity += " (Cantilever end)";
-                        }
-                        endNodeFixity = endNodeFixity.Replace(',', '|');
-
-                        string spanLineOnly = $"{id},{name},{filterValue},{levelName},{sectionName},{breadth},{depth},{spanName},{startNodeIdx},{startNodeFixity},{endNodeIdx},{endNodeFixity},{lengthFt},{rot}";
-
-                        foreach (ILoadingCase loadingCase in loadingCases)
-                        {
-                            string loadName = loadingCase.Name.Replace(',', '`');
-                            SpanResults spanResults = new SpanResults(span, 1, loadingCase, reduced, RequestedAnalysisType, member);
-
-                            // Getting maximum internal forces and displacements and locations
-                            MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
-                            string maxLine = spanLineOnly + "," +
-                                    $"{loadName},{maxSpanInfo.ShearMajor.Value},{maxSpanInfo.ShearMinor.Value},{maxSpanInfo.MomentMajor.Value},{maxSpanInfo.MomentMinor.Value},{maxSpanInfo.AxialForce.Value},{maxSpanInfo.Torsion.Value},{maxSpanInfo.DeflectionMajor.Value},{maxSpanInfo.DeflectionMinor.Value}";
-                            sw1.WriteLine(maxLine);
-                        }
+                        sw1.WriteLine(line);
                     }
                 }
             }
@@ -185,6 +175,86 @@ namespace TeklaResultsInterrogator.Commands
             Check();
 
             return;
+        }
+
+        private static async Task<List<string>> ProcessMemberAsync(IMember member, IEnumerable<IMemberSpan> spans, List<ILoadingCase> loadingCases, bool reduced, AnalysisType analysisType, string? filterField, string? filterValue, Dictionary<int, IConstructionPoint> pointsDict, Dictionary<int, IHorizontalConstructionPlane> levelsDict)
+        {
+            var lines = new List<string>();
+            string name = member.Name;
+            Guid id = member.Id;
+
+            // Get Level Name
+            string levelName = "Not Associated";
+            if (member.MemberNodes.Value.First().Value.ConstructionPointIndex != null)
+            {
+                int startNodeIdx = member.MemberNodes.Value.First().Value.ConstructionPointIndex.Value;
+                if (pointsDict.TryGetValue(startNodeIdx, out var startPoint))
+                {
+                    int planeId = startPoint.PlaneInfo.Value.Index;
+                    if (levelsDict.TryGetValue(planeId, out var level))
+                    {
+                        levelName = level.Name;
+                    }
+                }
+            }
+
+            foreach (IMemberSpan span in spans)
+            {
+                var udas = await span.GetUserDefinedAttributesAsync();
+
+
+                if (!string.IsNullOrEmpty(filterValue))
+                {
+                    bool udaMatchingFilterValueExists = udas.Where(c =>
+                        (c as IUserDefinedTextAttribute)?.Text.Equals(filterValue, StringComparison.CurrentCultureIgnoreCase) == true
+                        && c?.AttributeDefinitionName.Equals(filterField, StringComparison.CurrentCultureIgnoreCase) == true)
+                        ?.Any() == true;
+                    if (!udaMatchingFilterValueExists)
+                    {
+                        continue;
+                    }
+                }
+
+                string spanName = span.Name;
+                double length = span.Length.Value;
+                double lengthFt = MmToFt(length); // Converting from [mm] to [ft]
+                double rot = Math.Round(RadToDeg(span.RotationAngle.Value), 3); // Converting from [rad] to [deg]
+                IMemberSection generalSection = (IMemberSection)span.ElementSection.Value;
+                ITimberBeamSection section = (ITimberBeamSection)generalSection.PhysicalSection.Value;
+                string sectionName = section.LongName;
+                double breadth = Math.Round(MmToIn(section.Breadth), 4);  // Converting from [mm] to [in]
+                double depth = Math.Round(MmToIn(section.Depth), 4);  // Converting from [mm] to [in]
+
+                int startNodeIdx = span.StartMemberNode.ConstructionPointIndex.Value;
+                string startNodeFixity = GetProperty(span.StartReleases.Value.DegreeOfFreedom).ToString();
+                if (GetProperty(span.StartReleases.Value.Cantilever) == true)
+                {
+                    startNodeFixity += " (Cantilever end)";
+                }
+                startNodeFixity = startNodeFixity.Replace(',', '|');
+                int endNodeIdx = span.EndMemberNode.ConstructionPointIndex.Value;
+                string endNodeFixity = GetProperty(span.EndReleases.Value.DegreeOfFreedom).ToString();
+                if (GetProperty(span.EndReleases.Value.Cantilever) == true)
+                {
+                    endNodeFixity += " (Cantilever end)";
+                }
+                endNodeFixity = endNodeFixity.Replace(',', '|');
+
+                string spanLineOnly = $"{id},{name},{filterValue},{levelName},{sectionName},{breadth},{depth},{spanName},{startNodeIdx},{startNodeFixity},{endNodeIdx},{endNodeFixity},{lengthFt},{rot}";
+
+                foreach (ILoadingCase loadingCase in loadingCases)
+                {
+                    string loadName = loadingCase.Name.Replace(',', '`');
+                    SpanResults spanResults = new(span, 1, loadingCase, reduced, analysisType, member);
+
+                    // Getting maximum internal forces and displacements and locations
+                    MaxSpanInfo maxSpanInfo = await spanResults.GetMaxima();
+                    string maxLine = spanLineOnly + "," +
+                            $"{loadName},{maxSpanInfo.ShearMajor.Value},{maxSpanInfo.ShearMinor.Value},{maxSpanInfo.MomentMajor.Value},{maxSpanInfo.MomentMinor.Value},{maxSpanInfo.AxialForce.Value},{maxSpanInfo.Torsion.Value},{maxSpanInfo.DeflectionMajor.Value},{maxSpanInfo.DeflectionMinor.Value}";
+                    lines.Add(maxLine);
+                }
+            }
+            return lines;
         }
     }
 }
